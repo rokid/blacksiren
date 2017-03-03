@@ -5,6 +5,8 @@
 
 __BEGIN_DECLS
 
+namespace BlackSiren {
+
 enum {
     SIREN_DEBUG,
     SIREN_INFO,
@@ -42,6 +44,7 @@ PRINTF_FORMAT(2, 3);
             assert(a)               \
         }                           \
     } while (0)
+}
 
 __END_DECLS
 
