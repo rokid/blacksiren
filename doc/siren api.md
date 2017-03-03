@@ -48,6 +48,9 @@
 ```alg_raw_stream_bf```: 裸数据流是否需要bf处理   
 ```alg_raw_stream_agc```: 裸数据是否需要agc处理   
 
+```alg_vt_enable```: 是否需要vt事件   
+```alg_vad_enable```: 是否需要vad事件，此事前端处理流程退化成raw stream
+
 
 ```alg_vad_mics```: vad使用的音频通道，数组形式    
 ```alg_mic_pos```: 所有麦克风的位置，每个位置由x,y,z三个double坐标描述。   
