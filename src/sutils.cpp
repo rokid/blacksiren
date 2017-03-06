@@ -2,20 +2,65 @@
 #include <unistd.h>
 #include <signal.h>
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <errno.h>
 
 #include "../include/sutils.h"
 #include "../include/os.h"
 
-void set_sig_child_handler() {
+namespace BlackSiren {
 
+static void sig_child_handler(int sig) {
+    siren_printf(SIREN_INFO, "received sig %d", sig);
+    pid_t pid;
+    int status;
+
+    int saved_errno = errno;
+
+    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
+        if (WIFEXITED(status)) {
+            if (WEXITSTATUS(status)) {
+                siren_printf(SIREN_INFO, "Process %d exited cleanly (%d)", pid, WEXITSTATUS(status));
+            }
+        }  else if (WIFSIGNALED(status)) {
+            if (WTERMSIG(status) != SIGKILL) {
+                siren_printf(SIREN_INFO, "Process %d exited due to signal (%d)", pid, WTERMSIG(status));
+            }
+            if (WCOREDUMP(status)) {
+                siren_printf(SIREN_ERROR, "Process %d dumped core", pid);
+            }
+        }
+    }
+
+    errno = saved_errno;
 }
 
+void set_sig_child_handler() {
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = sig_child_handler;
+
+    int err = sigaction(SIGCHLD, &sa, NULL);
+    if (err < 0) {
+        siren_printf(SIREN_ERROR, "Error settings SIGCHLD handler: %s", strerror(errno));
+    }
+}
 
 void unset_sig_child_handler() {
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = SIG_DFL;
 
+    int err = sigaction(SIGCHLD, &sa, NULL);
+    if (err < 0) {
+        siren_printf(SIREN_ERROR, "Error settings SIGCHLD handler: %s", strerror(errno));
+    }
 }
 
 #ifdef CONFIG_ANDROID_LOG
@@ -58,4 +103,6 @@ void siren_printf(int level, const char *fmt, ...) {
         printf("\n");
     }
     va_end(ap);
+}
+
 }

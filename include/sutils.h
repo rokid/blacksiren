@@ -1,6 +1,8 @@
 #ifndef BLACK_SIREN_UTILS_H
 #define BLACK_SIREN_UTILS_H
 
+#include <cassert>
+
 #include "common.h"
 
 __BEGIN_DECLS
@@ -34,16 +36,21 @@ PRINTF_FORMAT(2, 3);
 
 #endif
 
+
+#ifdef CONFIG_NO_STDOUT_DEBUG
+#define SIREN_ASSERT(a) dp{}while(0)
+#else
 #define SIREN_ASSERT(a)             \
     do {                            \
         if (!(a)) {                 \
-            siren_printf(MSG_ERROR, \
+            siren_printf(SIREN_ERROR, \
                     "SIREN_ASSERT FAILED '" #a "' " \
                     "%s %s:%d\n",   \
                     __FUNCTION__, __FILE__, __LINE__);  \
-            assert(a)               \
+            assert(a);               \
         }                           \
     } while (0)
+#endif
 }
 
 __END_DECLS
