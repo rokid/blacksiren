@@ -6,6 +6,7 @@
 #include <linux/futex.h>
 #include <sys/cdefs.h>
 
+#include <iostream>
 #include <atomic>
 #include <algorithm>
 
@@ -55,19 +56,20 @@ static inline int futex_wait(volatile int* p, int val, struct timespec* timeout)
 }
 
 static inline int dec_if_gt0(std::atomic_int &val, volatile int *p) {
-    int &x = *const_cast<int*>(p);
+    int x = 0;
     while ((x = val.load(std::memory_order_acquire)) > 0 &&
             !val.compare_exchange_weak(x, x - 1,
                                        std::memory_order_acq_rel, std::memory_order_relaxed));
+    *p = val.load();
     return x;
 }
 
 static inline int inc_if_le0(std::atomic_int &val, volatile int *p) {
-    int &x = *const_cast<int*>(p);
+    int x = 0;
     while ((x = val.load(std::memory_order_acquire)) <= 0 &&
             !val.compare_exchange_weak(x, x + 1,
                                        std::memory_order_acq_rel, std::memory_order_relaxed));
-
+    *p = val.load();
     return x;
 }
 
@@ -120,7 +122,7 @@ int LFCounter::dec(struct timespec *timeout) {
         }
         waiters.fetch_add(-1, std::memory_order_relaxed);
     }
-    return val;
+    return val_;
 }
 
 void LFCounter::wake() {
@@ -145,7 +147,7 @@ int LFItem::push( void *pdata, struct timespec *end_time, bool block) {
     } else {
         void *t = nullptr;
         while (!_data.compare_exchange_weak(t, pdata,
-                                            std::memory_order_release,
+                                            std::memory_order_acq_rel,
                                             std::memory_order_relaxed));
         counter.wake_if_needed();
     }
@@ -156,6 +158,7 @@ int LFItem::pop( void **data, struct timespec *end_time) {
     int err = 0;
     void *data_ = nullptr;
     if (counter.dec(end_time) != 1) {
+        std::cout<<"dec != 1"<<std::endl;
         counter.wake_if_needed();
         err = -1;
     } else {
@@ -163,7 +166,7 @@ int LFItem::pop( void **data, struct timespec *end_time) {
         counter.wake_if_needed();
         while ((nullptr == (data_ = _data.load(std::memory_order_acquire)))
                 || !_data.compare_exchange_weak(data_, t,
-                                                std::memory_order_release,
+                                                std::memory_order_acq_rel,
                                                 std::memory_order_relaxed));
     }
     *data = data_;
@@ -173,7 +176,7 @@ int LFItem::pop( void **data, struct timespec *end_time) {
 int LFQueue::push (void *data) {
     int err = 0;
     while (1) {
-        unsigned long seq = pop_.fetch_add(1, std::memory_order_relaxed);
+        unsigned long seq = push_.fetch_add(1, std::memory_order_relaxed);
         LFItem *it = item + (seq & pos_mask);
         if (0 == it->push(data, NULL, 0)) {
             queued_item.fetch_add(1, std::memory_order_relaxed);

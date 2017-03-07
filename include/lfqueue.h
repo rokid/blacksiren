@@ -57,7 +57,6 @@ private:
 
 class LFQueue {
 public:
-    LFQueue() = default;
     LFQueue(uint32_t len, void *buf) :
         push_(0), pop_(0), item(nullptr), allocated(nullptr),
         queued_item(0) {
