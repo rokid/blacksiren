@@ -45,7 +45,9 @@ public:
             siren_state_changed_callback_t *callback) = 0;
     virtual void set_siren_steer(float ho, float ver) = 0;
     virtual void destroy_siren() = 0;
-    virtual siren_status_t rebuild_vt_word_list(const char **vt_word_list) = 0;
+    virtual siren_status_t rebuild_vt_word_list(const char **vt_word_list, int num) = 0;
+
+    virtual bool get_thread_key() = 0;
 };
 
 }

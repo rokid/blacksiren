@@ -62,6 +62,8 @@ struct SirenConfig {
 
     bool siren_use_share_mem = false;
     std::string siren_share_mem_file_path;
+    unsigned long siren_recording_socket_wmem = 4 * 1024 * 1024;
+    unsigned long siren_recording_socket_rmem = 6 * 1024 * 1024;
     int siren_raw_voice_block_size = 2;
     int siren_raw_voice_block_num = 524288;
     int siren_processed_voice_block_size = 65536;
