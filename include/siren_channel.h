@@ -7,7 +7,7 @@
 #include <string.h>
 #include <thread>
 #include <mutex>
-
+#include <functional>
 
 #include "sutils.h"
 
@@ -21,6 +21,8 @@ enum {
     SIREN_CHANNEL_ERROR,
 };
 
+
+
 struct Message {
     int len;
     int msg;
@@ -33,6 +35,19 @@ struct Message {
 	}
 };
 
+
+struct InterstedResponse {
+    Message message;
+    std::function<void(int)> callback;
+};
+
+struct Request {
+    struct Message message;
+    char *data;
+    void release() {
+        message.release();
+    }
+};
 
 class SirenSocketChannel;
 class SirenSocketReader {
@@ -70,11 +85,7 @@ public:
     ~SirenSocketChannel();
 
     bool open();
-    void close();
     
-    SirenSocketWriter* getWriter() {return writer;}
-    SirenSocketReader* getReader() {return reader;}
-
     friend class SirenSocketReader;
     friend class SirenSocketWriter; 
 private:
@@ -82,9 +93,6 @@ private:
     int rmem;
     int wmem;
     std::mutex mtx;
-
-    SirenSocketWriter *writer;
-    SirenSocketReader *reader;
 };
 
 

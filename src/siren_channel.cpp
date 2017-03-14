@@ -43,7 +43,6 @@ SirenSocketReader::~SirenSocketReader() {
     close(socket);
 }
 
-
 void SirenSocketReader::prepareOnReadSideProcess() {
     //close write
     close (channel->sockets[0]);
@@ -179,19 +178,9 @@ int SirenSocketWriter::writeMessage(Message *msg, char *data) {
 SirenSocketChannel::SirenSocketChannel(int rmem_, int wmem_) {
     rmem = rmem_;
     wmem = wmem_;
-
-    writer = nullptr;
-    reader = nullptr;
 }
 
 SirenSocketChannel::~SirenSocketChannel() {
-    if (writer != nullptr) {
-        delete writer;
-    }
-
-    if (reader != nullptr) {
-        delete reader;
-    }
 }
 
 bool SirenSocketChannel::open() {
@@ -220,8 +209,6 @@ bool SirenSocketChannel::open() {
     getsockopt(sockets[1], SOL_SOCKET, SO_RCVBUF, &real_rmem, &len);
     siren_printf(SIREN_INFO, "get sockets[1] rmem to %d", real_rmem);
     //use 0 as writer 1 as reader
-    writer = new SirenSocketWriter(this);
-    reader = new SirenSocketReader(this);
 
     return true;
 }

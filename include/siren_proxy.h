@@ -10,35 +10,11 @@
 #include "siren_channel.h"
 #include "isiren.h"
 #include "sutils.h"
+#include "lfqueue.h"
 
 namespace BlackSiren {
 
 class SirenProxy;
-class ProxyRequestThread {
-public:
-    ProxyRequestThread(SirenProxy *siren):
-            pSiren(siren) {}
-    ~ProxyRequestThread() {
-    
-    }
-
-private:
-    SirenProxy* pSiren;
-};
-
-
-class ProxyResponseThread {
-public:
-    ProxyResponseThread(SirenProxy *siren):
-            pSiren(siren) {}
-    ~ProxyResponseThread() {
-    
-    }
-
-private:
-    SirenProxy* pSiren;
-};
-
 class RecordingThread {
 public:
     RecordingThread(SirenProxy *siren);
@@ -94,15 +70,19 @@ private:
 
 class SirenProxy : public ISiren {
 public:
-    SirenProxy() : allocated_from_thread(false),
+    SirenProxy() : 
+        requestResponseLaunch(false),
+        waitingInit(false),
+        sirenBaseInitFailed(false),
+        requestThreadStop(false),
+        allocated_from_thread(false),
         global_config(nullptr),
         input_callback(nullptr),
         realStreamStart(false),
         procStreamStart(false),
         recordStreamStart(false),
-        requestThread(nullptr),
-        responseThread(nullptr),
-        recordingThread(nullptr)
+        recordingThread(nullptr),
+        requestQueue(32, nullptr)
     {
 
     }
@@ -125,25 +105,42 @@ public:
     }
 
     void clearThread() {
-        if (requestThread != nullptr) {
-            delete requestThread;
-        }
-
-        if (responseThread != nullptr) {
-            delete responseThread;
-        }
-
         if (recordingThread != nullptr) {
             delete recordingThread;
         }
     }
 
-private:
-    friend class ProxyRequestThread;
-    friend class ProxyResponseThread;
-    friend class RecordingThread;
+    void finishRequestThread() {
+        requestThreadStop.store(true, std::memory_order_release);    
+    }    
 
+    void requestThreadHandler();
+    void responseThreadHandler();
+private:
+    friend class RecordingThread;
+    void launchRequestThread();
+    void launchResponseThread();
+    void waitingRequestResponseThread();
+    void stopRequestThread(bool onInit);
+    bool requestResponseLaunch;
+    std::mutex launchMutex;
+    std::condition_variable launchCond;
+
+    bool waitingInit;
+    bool sirenBaseInitFailed;
+    std::mutex initMutex;
+    std::condition_variable initCond;
+
+    std::mutex requestCallbackMutex;
+    std::condition_variable requestCond;
+    std::vector<InterstedResponse> waitMessage;
     
+    std::thread requestThread;
+    std::atomic_bool requestThreadStop;
+
+    std::thread responseThread;
+    std::atomic_bool responseThreadStop;
+
     bool allocated_from_thread;
     SirenConfigurationManager *global_config;
     siren_input_if_t *input_callback;
@@ -152,9 +149,12 @@ private:
     bool procStreamStart;
     bool recordStreamStart;
 
-    ProxyRequestThread *requestThread;
-    ProxyResponseThread *responseThread;
     RecordingThread *recordingThread;
+
+    SirenSocketChannel requestChannel;
+    SirenSocketChannel responseChannel;
+
+    LFQueue requestQueue;  
 
     int siren_pid;
 };
