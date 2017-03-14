@@ -15,7 +15,9 @@ include $(CLEAR_VARS)
 LOCAL_PREBUILT_LIBS := \
 		libr2ssp:thirdparty/support/$(TARGET_ARCH)/libs/libr2ssp.so \
 		libztvad:thirdparty/support/$(TARGET_ARCH)/libs/libztvad.so \
-		libztcodec2:thirdparty/support/$(TARGET_ARCH)/libs/libztcodec2.so 
+		libztcodec2:thirdparty/support/$(TARGET_ARCH)/libs/libztcodec2.so \
+		libr2audio:thirdparty/support/$(TARGET_ARCH)/libs/legacy/libr2audio.so \
+		libr2vt:thirdparty/support/$(TARGET_ARCH)/libs/legacy/libr2vt.so
 include $(BUILD_MULTI_PREBUILT)
 
 THIRD_INCLUDES += \
@@ -38,17 +40,29 @@ THIRD_INCLUDES += $(LOCAL_PATH)/thirdparty/support/arm64-v8a/include
 endif
 
 LOCAL_SRC_FILES:= \
-	$(SRC) \
-	test.cpp
+	$(SRC) 
 
 LOCAL_C_INCLUDES += \
 		$(THIRD_INCLUDES) \
 		$(LOCAL_PATH)/include
 
 LOCAL_CFLAGS:= $(L_CFLAGS) -Wall -Werror -Wextra -std=gnu++11 $(EXTRA_CFLAGS)
-LOCAL_MODULE:= cpp_test
-LOCAL_SHARED_LIBRARIES := liblog
+LOCAL_MODULE:= libbsiren
+LOCAL_SHARED_LIBRARIES := liblog libr2ssp libztvad libztcodec2 libr2vt libr2audio
 LOCAL_STATIC_LIBRARIES += libjsonc_static
+
+include $(BUILD_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
+
+LOCAL_SRC_FILES := \
+	test.cpp
+
+LOCAL_C_INCLUDES += \
+		$(LOCAL_PATH)/include
+
+LOCAL_MODULE := test
+LOCAL_SHARED_LIBRARIES := libbsiren
 
 include $(BUILD_EXECUTABLE)
 
