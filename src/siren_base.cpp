@@ -34,6 +34,9 @@ SirenBase::SirenBase(SirenConfig &config_, int socket_, SirenSocketReader &reade
     processQueue(64, nullptr),
     recordingQueue(256, nullptr){
 
+    requestReader.prepareOnReadSideProcess();
+    resultWriter.prepareOnWriteSideProcess();
+
     int channels = config.mic_channel_num;
     int sample = config.mic_sample_rate;
     int byte = config.mic_audio_byte;
@@ -46,7 +49,7 @@ SirenBase::SirenBase(SirenConfig &config_, int socket_, SirenSocketReader &reade
     setsockopt(socket_, SOL_SOCKET, SO_RCVBUF, &rmem, sizeof (rmem));
 }
 
-siren_status_t SirenBase::init_siren(const char *path, siren_input_if_t *input) {
+siren_status_t SirenBase::init_siren(void *token, const char *path, siren_input_if_t *input) {
     main();
     return SIREN_STATUS_OK;
 }

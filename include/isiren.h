@@ -37,7 +37,7 @@ class ISiren {
 public:
     ISiren() = default;
     virtual ~ISiren() {}
-    virtual siren_status_t init_siren(const char *path, 
+    virtual siren_status_t init_siren(void *token, const char *path, 
             siren_input_if_t *input) = 0;
     virtual void start_siren_process_stream(siren_proc_callback_t 
             *callback) = 0;

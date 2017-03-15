@@ -13,12 +13,12 @@ typedef int32_t siren_event_t;
 typedef int32_t siren_state_t;
 
 
-typedef int (*init_input_stream_t)();
-typedef void (*release_input_stream_t)();
-typedef void (*start_input_stream_t)();
-typedef void (*stop_input_stream_t)();
-typedef int (*read_input_stream_t)(char *buff, int len);
-typedef void (*on_err_input_stream_t)();
+typedef int (*init_input_stream_t)(void *token);
+typedef void (*release_input_stream_t)(void *token);
+typedef void (*start_input_stream_t)(void *token);
+typedef void (*stop_input_stream_t)(void *token);
+typedef int (*read_input_stream_t)(void *token, char *buff, int len);
+typedef void (*on_err_input_stream_t)(void *token);
 
 
 typedef struct {
@@ -30,7 +30,7 @@ typedef struct {
     on_err_input_stream_t on_err_input;
 } siren_input_if_t;
 
-typedef void (*on_voice_event_t)(int length, siren_event_t event,
+typedef void (*on_voice_event_t)(void *token, int length, siren_event_t event,
                                  void *buff, int has_sl,
                                  int has_voice, double sl_degree,
                                  int has_voiceprint);
@@ -39,13 +39,13 @@ typedef struct {
     on_voice_event_t voice_event_callback;
 } siren_proc_callback_t;
 
-typedef void (*on_raw_voice_t)(int length, void *buff);
+typedef void (*on_raw_voice_t)(void *token, int length, void *buff);
 
 typedef struct {
     on_raw_voice_t raw_voice_callback;
 } siren_raw_stream_callback_t;
 
-typedef void (*on_siren_state_changed)(int current);
+typedef void (*on_siren_state_changed)(void *token, int current);
 
 typedef struct {
     on_siren_state_changed state_changed_callback;
@@ -82,7 +82,7 @@ enum {
     SIREN_STATE_SLEEP
 };
 
-siren_status_t init_siren(const char *path, siren_input_if_t *input);
+siren_status_t init_siren(void *token, const char *path, siren_input_if_t *input);
 void start_siren_process_stream(siren_proc_callback_t *callback);
 void start_siren_raw_stream(siren_raw_stream_callback_t *callback);
 void stop_siren_process_stream();

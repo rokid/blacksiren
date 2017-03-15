@@ -36,7 +36,7 @@ static ISiren& get_global_siren() {
     return global_siren;
 }
 
-siren_status_t init_siren(const char *path, siren_input_if_t *input) {
+siren_status_t init_siren(void *token, const char *path, siren_input_if_t *input) {
     if (path == nullptr) {
         siren_printf(BlackSiren::SIREN_WARNING, "empty json path use default settings");
     }
@@ -57,7 +57,7 @@ siren_status_t init_siren(const char *path, siren_input_if_t *input) {
         return SIREN_STATUS_ERROR;
     }
 
-    return siren.init_siren(path, input);
+    return siren.init_siren(token, path, input);
 }
 
 void start_siren_process_stream(siren_proc_callback_t *callback) {

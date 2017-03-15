@@ -70,7 +70,7 @@ private:
 
 class SirenProxy : public ISiren {
 public:
-    SirenProxy() : 
+    SirenProxy() :
         requestResponseLaunch(false),
         waitingInit(false),
         sirenBaseInitFailed(false),
@@ -88,7 +88,7 @@ public:
     }
     virtual ~SirenProxy() = default;
 
-    virtual siren_status_t init_siren(const char *path, siren_input_if_t *input) override;
+    virtual siren_status_t init_siren(void *token, const char *path, siren_input_if_t *input) override;
     virtual void start_siren_process_stream(siren_proc_callback_t *callback) override;
     virtual void start_siren_raw_stream(siren_raw_stream_callback_t *callback) override;
     virtual void stop_siren_process_stream() override;
@@ -117,6 +117,8 @@ public:
     void requestThreadHandler();
     void responseThreadHandler();
 private:
+    void *token;
+    
     friend class RecordingThread;
     void launchRequestThread();
     void launchResponseThread();

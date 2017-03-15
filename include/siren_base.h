@@ -21,9 +21,9 @@ namespace BlackSiren {
 class SirenBase : public ISiren {
 public:
     SirenBase(SirenConfig &config, int socket, SirenSocketReader &requestReader, SirenSocketWriter &resultWriter);
-    virtual ~SirenBase();
+    virtual ~SirenBase() = default;
 
-    virtual siren_status_t init_siren(const char *path, siren_input_if_t *input) override;
+    virtual siren_status_t init_siren(void *token, const char *path, siren_input_if_t *input) override;
     virtual void start_siren_process_stream(siren_proc_callback_t *callback) override;
     virtual void start_siren_raw_stream(siren_raw_stream_callback_t *callback) override;
     virtual void stop_siren_process_stream() override;

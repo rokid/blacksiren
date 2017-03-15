@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <cstdio>
 
+#include "siren.h"
 #include "sutils.h"
 #include "lfqueue.h"
 #include "easyr2_queue.h"
@@ -112,45 +113,61 @@ void test_common() {
     t2.join();
 }
 
-void test_channel() {
+struct ChannelTest {
     BlackSiren::SirenSocketChannel channel;
+    std::thread th;
+    void thread_handler();
+    void test_channel();
+};
+
+void ChannelTest::thread_handler() {
+    //BlackSiren::SirenSocketReader *reader = new BlackSiren::SirenSocketReader(&channel);
+    BlackSiren::SirenSocketReader reader(&channel);
+    reader.prepareOnReadSideProcess();
+    BlackSiren::Message *msg = nullptr;
+    char *data = nullptr;
+    for (;;) {
+        if (reader.pollMessage(&msg, &data) != BlackSiren::SIREN_CHANNEL_OK) {
+            std::cout << "error!!!!!" << std::endl;
+        } else {
+            std::cout << "read message !!!" << std::endl;
+            assert(msg != nullptr);
+
+            std::cout << "read type " << msg->msg << " read len " << msg->len << std::endl;
+            if (msg->len != 0) {
+                std::cout << "read data " << data << std::endl;
+            }
+            msg->release();
+        }
+    }
+
+}
+
+void ChannelTest::test_channel() {
     if (!channel.open()) {
         BlackSiren::siren_printf(BlackSiren::SIREN_ERROR, "channel open failed");
         return;
     }
 
-    BlackSiren::SirenSocketReader *reader = new BlackSiren::SirenSocketReader(&channel);
-    BlackSiren::SirenSocketWriter *writer = new BlackSiren::SirenSocketWriter(&channel);
-
-    if (reader == nullptr || writer == nullptr) {
-        BlackSiren::siren_printf(BlackSiren::SIREN_ERROR, "either writer or reader is null or both null");
-        return;
-    }
-
-
+#if 0
     std::cout << "start test" << std::endl;
     int child  = fork();
+#else
+    std::thread t(&ChannelTest::thread_handler, this);
+    th = std::move(t);
+    th.join();
+#endif
+#if 0
     //in child
     if (child == 0) {
-        reader->prepareOnReadSideProcess();
-        BlackSiren::Message *msg = nullptr;
-        char *data = nullptr;
-        for (;;) {
-            if (reader->pollMessage(&msg, &data) != BlackSiren::SIREN_CHANNEL_OK) {
-                std::cout << "error!!!!!" << std::endl;
-            } else {
-                std::cout << "read message !!!" << std::endl;
-                assert(msg != nullptr);
-
-                std::cout << "read type " << msg->msg << " read len " << msg->len << std::endl;
-                if (msg->len != 0) {
-                    std::cout << "read data "<< data<<std::endl;
-                } 
-                msg->release();
-            }
-        }
+        std::thread t(&ChannelTest::thread_handler, this);
+        th = std::move(t);
+        th.join();
         //in parent
     } else if (child > 0) {
+#endif
+#if 0
+        BlackSiren::SirenSocketWriter *writer = new BlackSiren::SirenSocketWriter(&channel);
         writer->prepareOnWriteSideProcess();
         std::this_thread::sleep_for(std::chrono::seconds(5));
         int i = 0;
@@ -161,66 +178,63 @@ void test_channel() {
             msg.msg = i;
             char buff[] = "hello world";
 
-            if (i%2==0) {
+            if (i % 2 == 0) {
                 msg.len = 0;
                 writer->writeMessage(&msg, nullptr);
             } else {
-                msg.len = sizeof(buff); 
+                msg.len = sizeof(buff);
                 writer->writeMessage(&msg, buff);
             }
         }
-
-        waitpid(child, nullptr, 0);
-    }
+#endif
+     //   waitpid(child, nullptr, 0);
+    //}
 }
 
-namespace MemTrace {
-
-class MemTraceObject {
-public:
-    MemTraceObject() {
-    }
-    static void operator delete(void *ptr);
-    static void *operator new(std::size_t count);
-private:
-    static int alloc_ref;
-public:
-    static int get_alloc_ref() {
-        return alloc_ref;
-    }
-};
-
-int MemTraceObject::alloc_ref = 0;
-void *MemTraceObject::operator new(std::size_t count) {
-    alloc_ref ++;
-    return ::operator new(count);
+int init_input_stream(void *token) {
+    siren_printf(BlackSiren::SIREN_INFO, "init input stream");
+    return 0;
 }
 
-void MemTraceObject::operator delete(void *ptr) {
-    alloc_ref --;
-    ::operator delete(ptr);
+void release_input_stream(void *token) {
+    siren_printf(BlackSiren::SIREN_INFO, "release input stream");
 }
 
-class Test : public MemTraceObject {
-public:
-    Test(int _a) : a(_a) {}
-private:
-    int a = 0;
-};
-
-void test_cpp() {
-    Test *t = new Test(10);
-    Test *t2 = new Test(12);
-
-    delete t;
-    std::cout << "---->" << MemTraceObject::get_alloc_ref() << std::endl;
+void start_input_stream(void *token) {
+    siren_printf(BlackSiren::SIREN_INFO, "start input stream");
 }
 
+void stop_input_stream(void *token) {
+    siren_printf(BlackSiren::SIREN_INFO, "stop input stream");
 }
+
+void read_input_stream(void *token) {
+    siren_printf(BlackSiren::SIREN_INFO, "read input stream");
+}
+
+void on_err_input_stream(void *token) {
+    siren_printf(BlackSiren::SIREN_INFO, "on err input stream");
+}
+
+void test_init() {
+    siren_input_if_t input_callback;
+    input_callback.init_input = init_input_stream;
+    input_callback.release_input = release_input_stream;
+    input_callback.start_input = start_input_stream;
+    input_callback.stop_input = stop_input_stream;
+    input_callback.on_err_input = on_err_input_stream;
+
+    int status = init_siren(nullptr, "/data/test.json", &input_callback);
+    siren_printf(BlackSiren::SIREN_INFO, "status = %d", status);
+}
+
 int main(void) {
     //test_common();
-    test_channel();
+    //ChannelTest test;
+    //test.test_channel();
     //test_thread_start();
     //test_thread_hardware_concurrency();
     //test_fork_socketpair();
+
+    test_init();
 }
