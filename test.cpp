@@ -114,15 +114,16 @@ void test_common() {
 }
 
 struct ChannelTest {
-    BlackSiren::SirenSocketChannel channel;
+    ChannelTest(BlackSiren::SirenSocketReader& reader_) : reader(reader_) {}
+    BlackSiren::SirenSocketReader& reader;
     std::thread th;
     void thread_handler();
-    void test_channel();
+    void channel_test();
 };
 
 void ChannelTest::thread_handler() {
     //BlackSiren::SirenSocketReader *reader = new BlackSiren::SirenSocketReader(&channel);
-    BlackSiren::SirenSocketReader reader(&channel);
+    //BlackSiren::SirenSocketReader reader(&channel);
     reader.prepareOnReadSideProcess();
     BlackSiren::Message *msg = nullptr;
     char *data = nullptr;
@@ -143,13 +144,20 @@ void ChannelTest::thread_handler() {
 
 }
 
-void ChannelTest::test_channel() {
+void ChannelTest::channel_test() {
+    std::thread t(&ChannelTest::thread_handler, this);
+    th = std::move(t);
+    th.join();
+}
+
+BlackSiren::SirenSocketChannel channel;
+void test_channel() {
     if (!channel.open()) {
         BlackSiren::siren_printf(BlackSiren::SIREN_ERROR, "channel open failed");
         return;
     }
 
-#if 0
+#if 1
     std::cout << "start test" << std::endl;
     int child  = fork();
 #else
@@ -157,12 +165,12 @@ void ChannelTest::test_channel() {
     th = std::move(t);
     th.join();
 #endif
-#if 0
+#if 1
     //in child
     if (child == 0) {
-        std::thread t(&ChannelTest::thread_handler, this);
-        th = std::move(t);
-        th.join();
+        BlackSiren::SirenSocketReader reader(&channel);
+        ChannelTest test(reader);
+        test.channel_test();
         //in parent
     } else if (child > 0) {
 #endif
@@ -187,8 +195,8 @@ void ChannelTest::test_channel() {
             }
         }
 #endif
-     //   waitpid(child, nullptr, 0);
-    //}
+        waitpid(child, nullptr, 0);
+    }
 }
 
 int init_input_stream(void *token) {
@@ -226,12 +234,12 @@ void test_init() {
 
     int status = init_siren(nullptr, "/data/test.json", &input_callback);
     siren_printf(BlackSiren::SIREN_INFO, "status = %d", status);
+    destroy_siren();
 }
 
 int main(void) {
     //test_common();
-    //ChannelTest test;
-    //test.test_channel();
+    //test_channel();
     //test_thread_start();
     //test_thread_hardware_concurrency();
     //test_fork_socketpair();

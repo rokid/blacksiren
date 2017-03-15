@@ -65,6 +65,7 @@ void SirenSocketReader::prepareOnReadSideProcess() {
         SIREN_ASSERT(false);
         return;
     }
+    isPrepareOnReadSide = true;
 }
 
 static bool checkMagic(const char *buff) {
@@ -80,6 +81,11 @@ static bool checkMagic(const char *buff) {
 }
 
 int SirenSocketReader::pollMessage(Message **msg, char **data) {
+    if (!isPrepareOnReadSide) {
+        siren_printf(SIREN_ERROR, "not prepare on read side");
+        return SIREN_CHANNEL_NOT_PREPARE;
+    }
+    
     //pollOnce'
     for (;;) {
         struct epoll_event item;
@@ -147,9 +153,16 @@ SirenSocketWriter::~SirenSocketWriter() {
 
 void SirenSocketWriter::prepareOnWriteSideProcess() {
     close (channel->sockets[1]);
+    isPrepareOnWriteSide = true;
 }
 
 int SirenSocketWriter::writeMessage(Message *msg, char *data) {
+    if (!isPrepareOnWriteSide) {
+        siren_printf(SIREN_ERROR, "not prepare on write side");
+        return SIREN_CHANNEL_NOT_PREPARE;
+    }
+
+    
     if (msg == nullptr || msg->len < 0) {
         siren_printf(SIREN_ERROR, "invalid msg");
         return SIREN_CHANNEL_ERROR;

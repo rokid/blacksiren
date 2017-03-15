@@ -65,7 +65,6 @@ private:
 
     int frameSize;
     int sockets[2];
-
 };
 
 class SirenProxy : public ISiren {
@@ -152,12 +151,10 @@ private:
     bool recordStreamStart;
 
     RecordingThread *recordingThread;
-
     SirenSocketChannel requestChannel;
     SirenSocketChannel responseChannel;
 
     LFQueue requestQueue;  
-
     int siren_pid;
 };
 

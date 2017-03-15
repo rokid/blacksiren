@@ -3,10 +3,11 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <signal.h>
+
 #include <cstdio>
 #include <error.h>
 #include <string.h>
-
 #include <mutex>
 #include <condition_variable>
 #include <thread>
@@ -112,9 +113,16 @@ void RecordingThread::pause() {
 void RecordingThread::stop() {
     siren_printf(SIREN_INFO, "terminal recording thread");
     std::unique_lock<decltype(termMutex)> lock(termMutex);
+    //let recording start turn true
     recordingTerm = true;
-    startCond.notify_one();
-    thread.join();
+    if (!recordingStart) {
+        recordingStart = true;
+        startCond.notify_one();
+    }
+    siren_printf(SIREN_INFO, "waiting recording thread exit");
+    if (thread.joinable()) {
+        thread.join();
+    }
 }
 
 void RecordingThread::recordingFn() {
@@ -133,6 +141,7 @@ void RecordingThread::recordingFn() {
             startCond.wait(lock, [this] {
                 return recordingStart;
             });
+            
             if (recordingTerm) {
                 siren_printf(SIREN_INFO, "proxy recording thread exit...");
                 return;
@@ -207,19 +216,25 @@ siren_status_t SirenProxy::init_siren(void *token, const char *path, siren_input
     siren_pid = fork();
     if (siren_pid < 0) {
         siren_printf(SIREN_ERROR, "fork siren failed...");
-        clearThread();
+        delete recordingThread;
         return SIREN_STATUS_ERROR;
     } else if (siren_pid == 0) {
         //gose for siren
         unset_sig_child_handler();
+        
         //reader for reponse
         SirenSocketReader reader(&requestChannel);
         SirenSocketWriter writer(&responseChannel);
+        
+        reader.prepareOnReadSideProcess();
+        writer.prepareOnWriteSideProcess();
+        
         int socket = recordingThread->getReader();
         SirenBase base(config, socket, reader, writer);
         base.init_siren(nullptr, nullptr, nullptr);
         siren_printf(SIREN_ERROR, "siren exit..");
         exit(0);
+    //in parent
     } else {
         launchRequestThread();
         launchResponseThread();
@@ -228,12 +243,12 @@ siren_status_t SirenProxy::init_siren(void *token, const char *path, siren_input
         waitingRequestResponseThread();
         siren_printf(SIREN_INFO, "response thread init done");
 
-        //gose for parent
         //detach recording thread
         std::thread t(&RecordingThread::recordingFn, recordingThread);
         recordingThread->setThread(t);
         recordingThread->getThread().detach();
 
+        siren_printf(SIREN_INFO, "waiting siren base init");
         //waiting response from siren base
         {
             std::unique_lock<decltype(initMutex)> l_(initMutex);
@@ -241,18 +256,21 @@ siren_status_t SirenProxy::init_siren(void *token, const char *path, siren_input
                 return waitingInit;
             });
 
+            siren_printf(SIREN_INFO, "siren base init done");
             if (sirenBaseInitFailed) {
                 stopRequestThread(true);
-
                 //waiting response thread exit;
                 siren_printf(SIREN_INFO, "waiting request thread exit");
-                responseThread.join();
+                if (responseThread.joinable()) {
+                    responseThread.join();
+                }
 
                 siren_printf(SIREN_INFO, "waiting recording thread exit");
                 recordingThread->stop();
             }
         }
         siren_printf(SIREN_INFO, "siren init done");
+        allocated_from_thread = true;
     }
     return result;
 }
@@ -315,7 +333,9 @@ void SirenProxy::stopRequestThread(bool onInit) {
     requestQueue.push(req);
 
     siren_printf(SIREN_INFO, "waiting proxy request thread exit");
-    requestThread.join();
+    if (requestThread.joinable()) {
+        requestThread.join();
+    }
 }
 
 void SirenProxy::launchRequestThread() {
@@ -334,13 +354,13 @@ void SirenProxy::responseThreadHandler() {
 
         {
             std::unique_lock<decltype(launchMutex)> l_(launchMutex);
-            //requestResponseLaunch = true;
+            requestResponseLaunch = true;
             launchCond.notify_one();
         }
 
         if ((status = responseReader.pollMessage(&msg, &data)) != SIREN_CHANNEL_OK) {
-            siren_printf(SIREN_ERROR, "proxy response thread poll message failed with %d", status);
-            continue;
+            siren_printf(SIREN_ERROR, "proxy response thread poll message failed with %d, response thread exit", status);
+            break;
         }
 
         if (msg == nullptr) {
@@ -435,7 +455,19 @@ void SirenProxy::set_siren_steer(float ho, float var) {
 }
 
 void SirenProxy::destroy_siren() {
+    //stop recording thread
+    recordingThread->stop();
+    siren_printf(SIREN_INFO, "recording thread stops");
+    delete recordingThread;
 
+    //let request exit
+    stopRequestThread();
+
+    //response thread will exit epoll and then exit
+    if (responseThread.joinable()) {
+        responseThread.join();
+    }
+    siren_printf(SIREN_INFO, "now we can exit...");
 }
 
 siren_status_t SirenProxy::rebuild_vt_word_list(const char **vt_word_list, int num) {
