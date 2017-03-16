@@ -12,6 +12,7 @@ typedef int32_t siren_status_t;
 typedef int32_t siren_event_t;
 typedef int32_t siren_state_t;
 
+typedef unsigned long siren_t;
 
 typedef int (*init_input_stream_t)(void *token);
 typedef void (*release_input_stream_t)(void *token);
@@ -82,16 +83,16 @@ enum {
     SIREN_STATE_SLEEP
 };
 
-siren_status_t init_siren(void *token, const char *path, siren_input_if_t *input);
-void start_siren_process_stream(siren_proc_callback_t *callback);
-void start_siren_raw_stream(siren_raw_stream_callback_t *callback);
-void stop_siren_process_stream();
-void stop_siren_raw_stream();
-void stop_siren_stream();
-void set_siren_state(siren_state_t state, siren_state_changed_callback_t *callback);
-void set_siren_steer(float ho, float ver);
-void destroy_siren();
-siren_status_t rebuild_vt_word_list(const char **vt_word_list);
+siren_t init_siren(void *token, const char *path, siren_input_if_t *input);
+void start_siren_process_stream(siren_t siren, siren_proc_callback_t *callback);
+void start_siren_raw_stream(siren_t siren, siren_raw_stream_callback_t *callback);
+void stop_siren_process_stream(siren_t siren);
+void stop_siren_raw_stream(siren_t siren);
+void stop_siren_stream(siren_t siren);
+void set_siren_state(siren_t siren, siren_state_t state, siren_state_changed_callback_t *callback);
+void set_siren_steer(siren_t siren, float ho, float ver);
+void destroy_siren(siren_t siren);
+siren_status_t rebuild_vt_word_list(siren_t siren, const char **vt_word_list);
 
 #ifdef __cplusplus
 }

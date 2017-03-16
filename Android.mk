@@ -46,7 +46,7 @@ LOCAL_C_INCLUDES += \
 		$(THIRD_INCLUDES) \
 		$(LOCAL_PATH)/include
 
-LOCAL_CFLAGS:= $(L_CFLAGS) -Wall -Werror -Wextra -std=gnu++11 $(EXTRA_CFLAGS)
+LOCAL_CFLAGS:= $(L_CFLAGS) -Wall -Wextra -Werror -std=gnu++11 $(EXTRA_CFLAGS)
 LOCAL_MODULE:= libbsiren
 LOCAL_SHARED_LIBRARIES := liblog libr2ssp libztvad libztcodec2 libr2vt libr2audio
 LOCAL_STATIC_LIBRARIES += libjsonc_static

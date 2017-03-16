@@ -1,6 +1,7 @@
 #include <thread>
 #include <iostream>
 #include <vector>
+#include <fstream>
 
 #include <fcntl.h>
 #include <sys/wait.h>
@@ -199,8 +200,12 @@ void test_channel() {
     }
 }
 
+
+std::ifstream test_recording_stream;
+siren_t siren;
 int init_input_stream(void *token) {
     siren_printf(BlackSiren::SIREN_INFO, "init input stream");
+    test_recording_stream.open("/data/debug0.pcm", std::ios::in | std::ios::binary);
     return 0;
 }
 
@@ -216,12 +221,28 @@ void stop_input_stream(void *token) {
     siren_printf(BlackSiren::SIREN_INFO, "stop input stream");
 }
 
-void read_input_stream(void *token) {
-    siren_printf(BlackSiren::SIREN_INFO, "read input stream");
+int read_input_stream(void *token,  char *buff, int len) {
+    //siren_printf(BlackSiren::SIREN_INFO, "read input stream");
+    test_recording_stream.read(buff, len);
+    if (!test_recording_stream) {
+        siren_printf(BlackSiren::SIREN_INFO, "read end of file");
+        if (siren != 0) {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            stop_siren_process_stream(siren);
+            return 0;
+        }
+    }
+
+    return 0;
 }
 
 void on_err_input_stream(void *token) {
     siren_printf(BlackSiren::SIREN_INFO, "on err input stream");
+}
+
+void on_voice_event(void *token, int len, siren_event_t event,
+                    void *buff, int has_sl, int has_voice, double sl_degree, int has_voice_print) {
+    siren_printf(BlackSiren::SIREN_INFO, "on voice event");
 }
 
 void test_init() {
@@ -231,10 +252,42 @@ void test_init() {
     input_callback.start_input = start_input_stream;
     input_callback.stop_input = stop_input_stream;
     input_callback.on_err_input = on_err_input_stream;
+    input_callback.read_input = read_input_stream;
 
-    int status = init_siren(nullptr, "/data/test.json", &input_callback);
-    siren_printf(BlackSiren::SIREN_INFO, "status = %d", status);
-    destroy_siren();
+    siren = init_siren(nullptr, "/data/test.json", &input_callback);
+    if (siren == 0) {
+        siren_printf(BlackSiren::SIREN_INFO, "init siren failed");
+        return;
+    }
+
+    destroy_siren(siren);
+}
+
+
+void test_recording() {
+    siren_input_if_t input_callback;
+    siren_proc_callback_t proc_callback;
+
+    input_callback.init_input = init_input_stream;
+    input_callback.release_input = release_input_stream;
+    input_callback.start_input = start_input_stream;
+    input_callback.stop_input = stop_input_stream;
+    input_callback.on_err_input = on_err_input_stream;
+    input_callback.read_input = read_input_stream;
+
+    proc_callback.voice_event_callback = on_voice_event;
+    siren = init_siren(nullptr, "/data/test.json", &input_callback);
+    if (siren == 0) {
+        siren_printf(BlackSiren::SIREN_INFO, "init siren failed");
+        return;
+    }
+
+    siren_printf(BlackSiren::SIREN_INFO, "start recording test");
+    start_siren_process_stream(siren, &proc_callback);
+
+    for (;;) {
+        std::this_thread::sleep_for(std::chrono::seconds(10));
+    }
 }
 
 int main(void) {
@@ -244,5 +297,6 @@ int main(void) {
     //test_thread_hardware_concurrency();
     //test_fork_socketpair();
 
-    test_init();
+    //test_init();
+    test_recording();
 }

@@ -145,6 +145,7 @@ private:
     bool allocated_from_thread;
     SirenConfigurationManager *global_config;
     siren_input_if_t *input_callback;
+    siren_proc_callback_t *proc_callback;
 
     bool realStreamStart;
     bool procStreamStart;

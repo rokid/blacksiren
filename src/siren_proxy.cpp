@@ -33,7 +33,7 @@ RecordingThread::RecordingThread(SirenProxy *siren) :
     int byte = config.mic_audio_byte;
     int frameLenInMs = config.mic_frame_length;
 
-    frameSize = channels * sample * byte * 1000 / frameLenInMs;
+    frameSize = channels * sample * byte / frameLenInMs;
     siren_printf(SIREN_INFO, "recording thread set frame with %d", frameSize);
     frameBuffer = (char *)malloc(frameSize);
 
@@ -46,6 +46,8 @@ RecordingThread::~RecordingThread() {
     if (frameBuffer != nullptr) {
         free(frameBuffer);
     }
+
+    close(sockets[0]);
 }
 
 bool RecordingThread::init() {
@@ -79,21 +81,11 @@ bool RecordingThread::init() {
     getsockopt(sockets[1], SOL_SOCKET, SO_RCVBUF, &real_rmem, &len);
     siren_printf(SIREN_INFO, "recording thread get sockets[1] rmem to %d", real_rmem);
 
-    //set non block to writer(sockets[0])
-    int opts;
-    opts = fcntl(sockets[0], F_GETFL);
-    opts = opts | O_NONBLOCK;
-    if (fcntl(sockets[0], F_SETFL, opts) < 0) {
-        siren_printf(SIREN_ERROR, "proxy recording thread set writer socket to nonblock failed");
-    }
-
     return true;
 }
 
 void RecordingThread::start() {
     siren_printf(SIREN_INFO, "start recording thread");
-    pSiren->input_callback->start_input(pSiren->token);
-
     {
         std::unique_lock<decltype(startMutex)> lock(startMutex);
         recordingStart = true;
@@ -105,7 +97,6 @@ void RecordingThread::pause() {
     siren_printf(SIREN_INFO, "stop recording thread");
     {
         std::unique_lock<decltype(startMutex)> lock(startMutex);
-        pSiren->input_callback->stop_input(pSiren->token);
         recordingStart = false;
     }
 }
@@ -126,11 +117,16 @@ void RecordingThread::stop() {
 }
 
 void RecordingThread::recordingFn() {
+    bool first = true;
+    bool inputStart = false;
     while (1) {
         int len = 0;
         {
             std::unique_lock<decltype(termMutex)> lock(termMutex);
             if (recordingTerm) {
+                if (inputStart) {
+                    pSiren->input_callback->stop_input(pSiren->token);
+                }
                 siren_printf(SIREN_INFO, "proxy recording thread exit...");
                 break;
             }
@@ -138,16 +134,33 @@ void RecordingThread::recordingFn() {
 
         {
             std::unique_lock<decltype(startMutex)> lock(startMutex);
-            startCond.wait(lock, [this] {
-                return recordingStart;
-            });
-            
+            while (!recordingStart) {
+                if (!first) {
+                    pSiren->input_callback->stop_input(pSiren->token); 
+                    inputStart = false;
+                }
+
+                startCond.wait(lock);
+                if (first) {
+                    first = false;
+                }
+
+                if (!recordingTerm) {
+                    pSiren->input_callback->start_input(pSiren->token);
+                    inputStart = true;
+                }
+            }
+
             if (recordingTerm) {
                 siren_printf(SIREN_INFO, "proxy recording thread exit...");
                 return;
             }
 
             len = pSiren->input_callback->read_input(pSiren->token, frameBuffer, frameSize);
+            //
+            if (!recordingStart) {
+                continue;
+            }
         }
 
         if (len != 0) {
@@ -169,9 +182,10 @@ void RecordingThread::recordingFn() {
         siren_printf(SIREN_INFO, "recording write return %d", len);
         if (len < 0) {
             siren_printf(SIREN_ERROR, "write error on socket with %s", strerror(errno));
-            pause();
+            //pause();
             continue;
         }
+
     }
 }
 
@@ -221,7 +235,6 @@ siren_status_t SirenProxy::init_siren(void *token, const char *path, siren_input
     } else if (siren_pid == 0) {
         //gose for siren
         unset_sig_child_handler();
-        
         //reader for reponse
         SirenSocketReader reader(&requestChannel);
         SirenSocketWriter writer(&responseChannel);
@@ -270,6 +283,7 @@ siren_status_t SirenProxy::init_siren(void *token, const char *path, siren_input
             }
         }
         siren_printf(SIREN_INFO, "siren init done");
+        input_callback->init_input(token);
         allocated_from_thread = true;
     }
     return result;
@@ -310,6 +324,11 @@ void SirenProxy::requestThreadHandler() {
 
         requestWriter.writeMessage(&req->message, req->data);
         siren_printf(SIREN_INFO, "proxy request thread write msg %d to siren", req->message.msg);
+
+        if (req->message.msg == SIREN_REQUEST_MSG_DESTROY) {
+            req->release();
+            return;
+        }
         req->release();
     }
 
@@ -336,6 +355,7 @@ void SirenProxy::stopRequestThread(bool onInit) {
     if (requestThread.joinable()) {
         requestThread.join();
     }
+    siren_printf(SIREN_INFO, "proxy request thread exit..");
 }
 
 void SirenProxy::launchRequestThread() {
@@ -360,7 +380,8 @@ void SirenProxy::responseThreadHandler() {
 
         if ((status = responseReader.pollMessage(&msg, &data)) != SIREN_CHANNEL_OK) {
             siren_printf(SIREN_ERROR, "proxy response thread poll message failed with %d, response thread exit", status);
-            break;
+            std::this_thread::sleep_for(std::chrono::microseconds(100));
+            continue;
         }
 
         if (msg == nullptr) {
@@ -406,6 +427,7 @@ void SirenProxy::responseThreadHandler() {
         }
         }
 
+        msg->release();
         if (destroy) {
             break;
         }
@@ -425,17 +447,29 @@ void SirenProxy::launchResponseThread() {
 }
 
 void SirenProxy::start_siren_process_stream(siren_proc_callback_t *callback) {
-
-
+    proc_callback = callback;
+    
+    Request *req = new Request;
+    req->message.msg = SIREN_REQUEST_MSG_START_PROCESS_STREAM;
+    req->message.len = 0;
+    req->data = nullptr;
+    requestQueue.push((void *)req);
+    std::this_thread::sleep_for(std::chrono::microseconds(10));
+    recordingThread->start();
 }
-
 void SirenProxy::start_siren_raw_stream(siren_raw_stream_callback_t *callback) {
 
 }
 
 
 void SirenProxy::stop_siren_process_stream() {
-
+    Request *req = new Request;
+    req->message.msg = SIREN_REQUEST_MSG_STOP_PROCESS_STREAM;
+    req->message.len = 0;
+    req->data = nullptr;
+    requestQueue.push((void *)req);
+    std::this_thread::sleep_for(std::chrono::microseconds(10));
+    recordingThread->pause();
 }
 
 void SirenProxy::stop_siren_raw_stream() {
@@ -455,18 +489,23 @@ void SirenProxy::set_siren_steer(float ho, float var) {
 }
 
 void SirenProxy::destroy_siren() {
+    unset_sig_child_handler();
     //stop recording thread
     recordingThread->stop();
     siren_printf(SIREN_INFO, "recording thread stops");
     delete recordingThread;
 
     //let request exit
-    stopRequestThread();
+    stopRequestThread(false);
 
     //response thread will exit epoll and then exit
     if (responseThread.joinable()) {
+        siren_printf(SIREN_INFO, "waiting proxy response thread exit");
         responseThread.join();
     }
+
+    siren_printf(SIREN_INFO, "waiting siren exit");
+    waitpid(siren_pid, nullptr, 0);
     siren_printf(SIREN_INFO, "now we can exit...");
 }
 

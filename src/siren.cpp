@@ -31,12 +31,8 @@ static bool check_nullptr_input_interface(siren_input_if_t *interface) {
     }
 }
 
-static ISiren& get_global_siren() {
-    thread_local SirenProxy global_siren;
-    return global_siren;
-}
 
-siren_status_t init_siren(void *token, const char *path, siren_input_if_t *input) {
+siren_t init_siren(void *token, const char *path, siren_input_if_t *input) {
     if (path == nullptr) {
         siren_printf(BlackSiren::SIREN_WARNING, "empty json path use default settings");
     }
@@ -51,116 +47,120 @@ siren_status_t init_siren(void *token, const char *path, siren_input_if_t *input
         return SIREN_STATUS_ERROR;
     }
 
-    ISiren& siren = std::ref(get_global_siren());
-    if (siren.get_thread_key()) {
-        siren_printf(BlackSiren::SIREN_ERROR, "init twice, please destory it first!");
-        return SIREN_STATUS_ERROR;
+    SirenProxy *proxy = new SirenProxy;
+    if (proxy->init_siren(token, path, input) != SIREN_STATUS_OK) {
+        delete proxy;
+        return (unsigned long)nullptr;
+    } else {
+        return (unsigned long)proxy;
     }
-
-    return siren.init_siren(token, path, input);
 }
 
-void start_siren_process_stream(siren_proc_callback_t *callback) {
+void start_siren_process_stream(siren_t siren, siren_proc_callback_t *callback) {
+    if (siren == 0) {
+        siren_printf(BlackSiren::SIREN_ERROR, "siren is null");
+        return;
+    }
+
     if (callback == nullptr) {
         siren_printf(BlackSiren::SIREN_ERROR, "empty proc callback");
         return;
     }
 
-    ISiren& siren = std::ref(get_global_siren());
-    if (!siren.get_thread_key()) {
-        siren_printf(BlackSiren::SIREN_ERROR, "siren not init");
+    SirenProxy *proxy = (SirenProxy *)siren;
+    proxy->start_siren_process_stream(callback);
+}
+
+void start_siren_raw_stream(siren_t siren, siren_raw_stream_callback_t *callback) {
+    if (siren == 0) {
+        siren_printf(BlackSiren::SIREN_ERROR, "siren is null");
         return;
     }
 
-    siren.start_siren_process_stream(callback);
-}
-
-void start_siren_raw_stream(siren_raw_stream_callback_t *callback) {
     if (callback == nullptr) {
         siren_printf(BlackSiren::SIREN_ERROR, "empty raw callback");
         return;
     }
 
-    ISiren& siren = std::ref(get_global_siren());
-    if (!siren.get_thread_key()) {
-        siren_printf(BlackSiren::SIREN_ERROR, "siren not init");
+    SirenProxy *proxy = (SirenProxy *)siren;
+    proxy->start_siren_raw_stream(callback);
+}
+
+void stop_siren_process_stream(siren_t siren) {
+    if (siren == 0) {
+        siren_printf(BlackSiren::SIREN_ERROR, "siren is null");
         return;
     }
 
-    siren.start_siren_raw_stream(callback);
+    SirenProxy *proxy = (SirenProxy *)siren;
+    proxy->stop_siren_process_stream();
 }
 
-void stop_siren_process_stream() {
-    ISiren& siren = std::ref(get_global_siren());
-    if (!siren.get_thread_key()) {
-        siren_printf(BlackSiren::SIREN_ERROR, "siren not init");
+void stop_siren_raw_stream(siren_t siren) {
+    if (siren == 0) {
+        siren_printf(BlackSiren::SIREN_ERROR, "siren is null");
         return;
     }
-    siren.stop_siren_process_stream();
+
+    SirenProxy *proxy = (SirenProxy *)siren;
+    proxy->stop_siren_raw_stream();
 }
 
-void stop_siren_raw_stream() {
-    ISiren& siren = std::ref(get_global_siren());
-    if (!siren.get_thread_key()) {
-        siren_printf(BlackSiren::SIREN_ERROR, "siren not init");
+void stop_siren_stream(siren_t siren) {
+    if (siren == 0) {
+        siren_printf(BlackSiren::SIREN_ERROR, "siren is null");
         return;
     }
-    siren.stop_siren_raw_stream();
+
+    SirenProxy *proxy = (SirenProxy *)siren;
+    proxy->stop_siren_stream();
 }
 
-void stop_siren_stream() {
-    ISiren& siren = std::ref(get_global_siren());
-    if (!siren.get_thread_key()) {
-        siren_printf(BlackSiren::SIREN_ERROR, "siren not init");
+void set_siren_state(siren_t siren, siren_state_t state, siren_state_changed_callback_t *callback) {
+    if (siren == 0) {
+        siren_printf(BlackSiren::SIREN_ERROR, "siren is null");
         return;
     }
-    siren.stop_siren_stream();
-}
 
-void set_siren_state(siren_state_t state, siren_state_changed_callback_t *callback) {
     if (callback == nullptr) {
         siren_printf(BlackSiren::SIREN_INFO, "use sync version");
     }
 
-    ISiren& siren = std::ref(get_global_siren());
-    if (!siren.get_thread_key()) {
-        siren_printf(BlackSiren::SIREN_ERROR, "siren not init");
-        return;
-    }
-
-    siren.set_siren_state(state, callback);
+    SirenProxy *proxy = (SirenProxy *)siren;
+    proxy->set_siren_state(state, callback);
 }
 
-void set_siren_steer(float ho, float ver) {
-    ISiren& siren = std::ref(get_global_siren());
-    if (!siren.get_thread_key()) {
-        siren_printf(BlackSiren::SIREN_ERROR, "siren not init");
+void set_siren_steer(siren_t siren, float ho, float ver) {
+    if (siren == 0) {
+        siren_printf(BlackSiren::SIREN_ERROR, "siren is null");
         return;
     }
-
-    siren.set_siren_steer(ho, ver);
+    SirenProxy *proxy = (SirenProxy *)siren;
+    proxy->set_siren_steer(ho, ver);
 }
 
-void destroy_siren() {
-    ISiren& siren = std::ref(get_global_siren());
-    if (!siren.get_thread_key()) {
-        siren_printf(BlackSiren::SIREN_ERROR, "siren not init");
+void destroy_siren(siren_t siren) {
+    if (siren == 0) {
+        siren_printf(BlackSiren::SIREN_ERROR, "siren is null");
         return;
     }
+    SirenProxy *proxy = (SirenProxy *)siren;
 
-    siren.destroy_siren();
+    proxy->destroy_siren();
+    delete proxy;
 }
 
-siren_status_t rebuild_vt_word_list(const char **vt_word_list, int num) {
+siren_status_t rebuild_vt_word_list(siren_t siren, const char **vt_word_list, int num) {
+    if (siren == 0) {
+        siren_printf(BlackSiren::SIREN_ERROR, "siren is null");
+        return SIREN_STATUS_ERROR;
+    }
+    
     if (vt_word_list == nullptr) {
         siren_printf(BlackSiren::SIREN_ERROR, "vt word list is nulltpr");
         return SIREN_STATUS_ERROR;
     }
-    ISiren& siren = std::ref(get_global_siren());
-    if (!siren.get_thread_key()) {
-        siren_printf(BlackSiren::SIREN_ERROR, "siren not init");
-        return SIREN_STATUS_ERROR;
-    }
-
-    return siren.rebuild_vt_word_list(vt_word_list, num);
+    
+    SirenProxy *proxy = (SirenProxy *)siren;
+    return proxy->rebuild_vt_word_list(vt_word_list, num);
 }
