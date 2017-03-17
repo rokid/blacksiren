@@ -297,6 +297,6 @@ int main(void) {
     //test_thread_hardware_concurrency();
     //test_fork_socketpair();
 
-    test_init();
-    //test_recording();
+    //test_init();
+    test_recording();
 }

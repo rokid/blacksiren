@@ -33,8 +33,9 @@ struct PreprocessVoicePackage {
     int aec;
     int size;
     char *data;
+    static PreprocessVoicePackage *allocatePreprocessVoicePackage(int msg, int aec, int size);
     void release() {
-        delete this;
+        delete (char *)this;
     }
 };
 
@@ -42,16 +43,18 @@ class SirenAudioPreProcessor {
 public:
     SirenAudioPreProcessor(int size, SirenConfig &config_):
         config(config_),
-        preprocessBuffSize(size) {}
+        frameSize(size),
+        averageDelay(0){}
     ~SirenAudioPreProcessor() = default;
     void preprocess(char *rawBuffer, PreprocessVoicePackage **voicePackage);    
     siren_status_t init();
     siren_status_t destroy();
 private:
     SirenConfig &config;
-    int preprocessBuffSize;
+    int frameSize;
     int currentLan;
-    
+    int averageDelay;
+
     r2ad1_htask ad1;
     bool ad1Init;
 };

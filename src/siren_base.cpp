@@ -287,7 +287,7 @@ void SirenBase::loopRecording() {
 
     Message msg(SIREN_RESPONSE_MSG_ON_INIT_OK);
     resultWriter.writeMessage(&msg);
-//#define CONFIG_RECORDING_DEBUG 1
+#define CONFIG_RECORDING_DEBUG 1
 #ifdef CONFIG_RECORDING_DEBUG
     std::ofstream recordingDebugStream;
     recordingDebugStream.open("/data/test.pcm", std::ios::out | std::ios::binary);
@@ -295,6 +295,7 @@ void SirenBase::loopRecording() {
 
 
     while (1) {
+        PreprocessVoicePackage *pPreVoicePackage = nullptr; 
         {
             std::unique_lock<decltype(recordingMutex)> l_(recordingMutex);
             recordingCond.wait(l_, [this] {
@@ -315,6 +316,7 @@ void SirenBase::loopRecording() {
             siren_printf(SIREN_INFO, "read returns %d", status);
             if (recordingExit.load(std::memory_order_acquire)) {
                 siren_printf(SIREN_INFO, "base recording thread request exit");
+                preProcessor.destroy();
                 return;
             } else {
                 siren_printf(SIREN_INFO, "base read from socket return %d", status);
@@ -322,19 +324,26 @@ void SirenBase::loopRecording() {
                 continue;
             }
         }
+        
+        //do preprocess
+        preProcessor.preprocess(frameBuffer, &pPreVoicePackage);
+        if (pPreVoicePackage == nullptr) {
+            siren_printf(SIREN_ERROR, "preprocess failed");
+            continue;
+        }
 
         //now we can precess first frame of data
 #ifdef CONFIG_RECORDING_DEBUG
         if (recordingDebugStream.is_open()) {
-            recordingDebugStream.write(frameBuffer, frameSize);
+            recordingDebugStream.write(pPreVoicePackage->data, pPreVoicePackage->size);
+            pPreVoicePackage->release();
         } else {
             siren_printf(SIREN_WARNING, "recording debug frame is not open!");
         }
 #endif
-        //do preprocess
 
     }
-
+    
     siren_printf(SIREN_INFO, "siren recording exits now");
 }
 
