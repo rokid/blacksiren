@@ -136,7 +136,7 @@ void RecordingThread::recordingFn() {
             std::unique_lock<decltype(startMutex)> lock(startMutex);
             while (!recordingStart) {
                 if (!first) {
-                    pSiren->input_callback->stop_input(pSiren->token); 
+                    pSiren->input_callback->stop_input(pSiren->token);
                     inputStart = false;
                 }
 
@@ -238,16 +238,16 @@ siren_status_t SirenProxy::init_siren(void *token, const char *path, siren_input
         //reader for reponse
         SirenSocketReader reader(&requestChannel);
         SirenSocketWriter writer(&responseChannel);
-        
+
         reader.prepareOnReadSideProcess();
         writer.prepareOnWriteSideProcess();
-        
+
         int socket = recordingThread->getReader();
         SirenBase base(config, socket, reader, writer);
         base.init_siren(nullptr, nullptr, nullptr);
         siren_printf(SIREN_ERROR, "siren exit..");
         exit(0);
-    //in parent
+        //in parent
     } else {
         launchRequestThread();
         launchResponseThread();
@@ -298,7 +298,7 @@ void SirenProxy::requestThreadHandler() {
             break;
         }
 
-        Request *req;
+        Message *req;
         int status = requestQueue.pop((void **)&req, nullptr);
         if (status != 0) {
             if (status == -2) {
@@ -316,41 +316,40 @@ void SirenProxy::requestThreadHandler() {
             continue;
         }
 
-        siren_printf(SIREN_INFO, "proxy request thread read msg %d", req->message.msg);
-        if (req->message.msg == SIREN_REQUEST_MSG_DESTROY_ON_INIT) {
+        siren_printf(SIREN_INFO, "proxy request thread read msg %d", req->msg);
+        if (req->msg == SIREN_REQUEST_MSG_DESTROY_ON_INIT) {
             req->release();
             return;
         }
 
-        requestWriter.writeMessage(&req->message, req->data);
-        siren_printf(SIREN_INFO, "proxy request thread write msg %d to siren", req->message.msg);
+        requestWriter.writeMessage(req);
+        siren_printf(SIREN_INFO, "proxy request thread write msg %d to siren", req->msg);
 
-        if (req->message.msg == SIREN_REQUEST_MSG_DESTROY) {
-            req->release();
-            return;
-        }
         req->release();
+        if (req->msg == SIREN_REQUEST_MSG_DESTROY) {
+            return;
+        }
     }
 
-    Request req;
-    req.message.msg = SIREN_REQUEST_MSG_DESTROY;
-    req.message.len = 0;
+    Message req;
+    req.msg = SIREN_REQUEST_MSG_DESTROY;
+    req.len = 0;
+    req.data = nullptr;
 
     siren_printf(SIREN_INFO, "proxy request thread ready to exit, send destroy message to siren");
-    requestWriter.writeMessage(&req.message, nullptr);
+    requestWriter.writeMessage(&req);
 }
 
 void SirenProxy::stopRequestThread(bool onInit) {
-    Request *req = new Request;
+    int msg;
     if (onInit) {
-        req->message.msg = SIREN_REQUEST_MSG_DESTROY_ON_INIT;
+        msg = SIREN_REQUEST_MSG_DESTROY_ON_INIT;
     } else {
-        req->message.msg = SIREN_REQUEST_MSG_DESTROY;
+        msg = SIREN_REQUEST_MSG_DESTROY;
     }
-    req->message.len = 0;
-    req->data = nullptr;
-    requestQueue.push(req);
+    Message *req = Message::allocateMessage(msg, 0);
 
+    requestQueue.push(req);
     siren_printf(SIREN_INFO, "waiting proxy request thread exit");
     if (requestThread.joinable()) {
         requestThread.join();
@@ -368,7 +367,6 @@ void SirenProxy::responseThreadHandler() {
     responseReader.prepareOnReadSideProcess();
     while (1) {
         Message *msg = nullptr;
-        char *data = nullptr;
         int status = SIREN_CHANNEL_OK;
         bool destroy = false;
 
@@ -378,7 +376,7 @@ void SirenProxy::responseThreadHandler() {
             launchCond.notify_one();
         }
 
-        if ((status = responseReader.pollMessage(&msg, &data)) != SIREN_CHANNEL_OK) {
+        if ((status = responseReader.pollMessage(&msg)) != SIREN_CHANNEL_OK) {
             siren_printf(SIREN_ERROR, "proxy response thread poll message failed with %d, response thread exit", status);
             std::this_thread::sleep_for(std::chrono::microseconds(100));
             continue;
@@ -405,7 +403,8 @@ void SirenProxy::responseThreadHandler() {
                 waitingInit = true;
                 sirenBaseInitFailed = true;
                 initCond.notify_one();
-                siren_printf(SIREN_INFO, "proxy response thread exit since init siren failed");
+
+                msg->release();
                 return;
             }
         }
@@ -448,11 +447,8 @@ void SirenProxy::launchResponseThread() {
 
 void SirenProxy::start_siren_process_stream(siren_proc_callback_t *callback) {
     proc_callback = callback;
-    
-    Request *req = new Request;
-    req->message.msg = SIREN_REQUEST_MSG_START_PROCESS_STREAM;
-    req->message.len = 0;
-    req->data = nullptr;
+
+    Message *req = Message::allocateMessage(SIREN_REQUEST_MSG_START_PROCESS_STREAM, 0);
     requestQueue.push((void *)req);
     std::this_thread::sleep_for(std::chrono::microseconds(10));
     recordingThread->start();
@@ -463,10 +459,7 @@ void SirenProxy::start_siren_raw_stream(siren_raw_stream_callback_t *callback) {
 
 
 void SirenProxy::stop_siren_process_stream() {
-    Request *req = new Request;
-    req->message.msg = SIREN_REQUEST_MSG_STOP_PROCESS_STREAM;
-    req->message.len = 0;
-    req->data = nullptr;
+    Message *req = Message::allocateMessage(SIREN_REQUEST_MSG_STOP_PROCESS_STREAM, 0);
     requestQueue.push((void *)req);
     std::this_thread::sleep_for(std::chrono::microseconds(10));
     recordingThread->pause();

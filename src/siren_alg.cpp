@@ -15,7 +15,7 @@
 
 namespace BlackSiren {
 
-siren_status_t SirenAudioProcessor::init(SirenConfig &config) {
+siren_status_t SirenAudioPreProcessor::init() {
     //TODO use config file
     currentLan = config.alg_config.alg_lan;
     int status = 0;
@@ -28,6 +28,29 @@ siren_status_t SirenAudioProcessor::init(SirenConfig &config) {
     } else {
         ad1Init = true;
     }
+    
+    ad1 = r2ad1_create();
+    assert (ad1 != nullptr);
+    return SIREN_STATUS_OK;
+}
+
+
+void SirenAudioPreProcessor::preprocess(char *rawBuffer, PreprocessVoicePackage **voicePackage) {
+
+}
+
+siren_status_t SirenAudioPreProcessor::destroy() {
+    if (ad1Init) {
+        r2ad1_sysexit();
+    }
+    return SIREN_STATUS_OK;
+}
+
+
+siren_status_t SirenAudioVBVProcessor::init() {
+    //TODO use config file
+    currentLan = config.alg_config.alg_lan;
+    int status = 0;
 
     status = r2ad2_sysinit(config.alg_config.alg_legacy_dir.c_str());
     if (status != 0) {
@@ -38,43 +61,22 @@ siren_status_t SirenAudioProcessor::init(SirenConfig &config) {
         ad2Init = true;
     }
 
-    status = r2ad3_sysinit(config.alg_config.alg_legacy_dir.c_str());
-    if (status != 0) {
-        siren_printf(SIREN_ERROR, "init ad3 failed");
-        ad3Init = false;
-        return SIREN_STATUS_ERROR;
-    } else {
-        ad3Init = true;
-    }
-
-    ad1 = r2ad1_create();
-    assert (ad1 != nullptr);
-
     ad2 = r2ad2_create();
     assert (ad2 != nullptr);
-
-    ad3 = r2ad3_create();
-    assert (ad3 != nullptr);
 
     return SIREN_STATUS_OK;
 }
 
-siren_status_t SirenAudioProcessor::destroy() {
-    if (ad1Init) {
-        r2ad1_sysexit();
-    }
-
+siren_status_t SirenAudioVBVProcessor::destroy() {
     if (ad2Init) {
         r2ad2_sysexit();
     }
 
-    if (ad3Init) {
-        r2ad3_sysexit();
-    }
     return SIREN_STATUS_OK;
 }
 
-void SirenAudioProcessor::process(PreprocessVociePackage *voicePackage, ProcessedVoiceResult **result) {
+// legacy vbv process just for testing 
+void SirenAudioVBVProcessor::process(PreprocessVoicePackage *voicePackage, ProcessedVoiceResult **result) {
 
 }
 

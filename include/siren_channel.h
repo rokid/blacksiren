@@ -24,30 +24,40 @@ enum {
 
 
 
+
 struct Message {
-    int len;
+    Message () {
+        magic[0] = 'a';
+        magic[1] = 'a';
+        magic[2] = 'b';
+        magic[3] = 'b';
+        data = nullptr;
+    }
+
+    Message(int msg_) : msg(msg_), len(0){
+        magic[0] = 'a';
+        magic[1] = 'a';
+        magic[2] = 'b';
+        magic[3] = 'b';
+        data = nullptr;
+    }
+    
+    char magic[4];
+    char padding[4];
     int msg;
-	void release() {
-		if (len > 0) {
-			free ((char *)this);
-		} else if (len == 0) {
-			delete this;
-		}
+	int len;
+    char *data;
+    void release() {
+		delete ((char *)this);
 	}
+
+    static Message* allocateMessage(int msg, int len);
 };
 
 
 struct InterstedResponse {
     Message message;
     std::function<void(int)> callback;
-};
-
-struct Request {
-    struct Message message;
-    char *data;
-    void release() {
-        message.release();
-    }
 };
 
 class SirenSocketChannel;
@@ -58,7 +68,7 @@ public:
     ~SirenSocketReader();
     
     void prepareOnReadSideProcess();
-    int pollMessage(Message **msg, char **data);
+    int pollMessage(Message **msg);
 private:
     bool isPrepareOnReadSide = false;
     int socket;
@@ -73,7 +83,7 @@ public:
     ~SirenSocketWriter();
 
     void prepareOnWriteSideProcess();
-    int writeMessage(Message *message, char *data);
+    int writeMessage(Message *message);
 private:
     bool isPrepareOnWriteSide = false;
     int socket;
@@ -93,7 +103,6 @@ private:
     int sockets[2];
     int rmem;
     int wmem;
-    std::mutex mtx;
 };
 
 

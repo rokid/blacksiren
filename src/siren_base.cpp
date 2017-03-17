@@ -93,7 +93,23 @@ void SirenBase::set_siren_steer(float ho, float var) {
 }
 
 void SirenBase::destroy_siren() {
+    //tell process exit
+    PreprocessVoicePackage *voicePackage = new PreprocessVoicePackage;
+    voicePackage->msg = SIREN_REQUEST_MSG_DESTROY;
+    voicePackage->data = nullptr;
+    voicePackage->size = 0;
+    processQueue.push((void *)voicePackage);
 
+    //tell proxy response thread exit
+    Message msg(SIREN_RESPONSE_MSG_ON_DESTROY);
+    resultWriter.writeMessage(&msg);
+
+    recordingExit.store(true, std::memory_order_release);
+    if (!recordingStart) {
+        std::unique_lock<decltype(recordingMutex)> l_(recordingMutex);
+        recordingStart = true;
+        recordingCond.notify_one();
+    }
 }
 
 siren_status_t SirenBase::rebuild_vt_word_list(const char **vt_word_list, int num) {
@@ -101,16 +117,21 @@ siren_status_t SirenBase::rebuild_vt_word_list(const char **vt_word_list, int nu
 }
 
 void SirenBase::responseThreadHandler() {
+    int retry = 0;
     while (1) {
         Message *message = nullptr;
-        char *data = nullptr;
         int status = SIREN_CHANNEL_OK;
 
-        if ((status = requestReader.pollMessage(&message, &data)) != SIREN_CHANNEL_OK) {
+        if ((status = requestReader.pollMessage(&message)) != SIREN_CHANNEL_OK) {
             siren_printf(SIREN_ERROR, "[SirenBase::responseThread] poll message with %d", status);
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            retry++;
+            if (retry >= 5) {
+                return;
+            }
             continue;
         }
+        retry = 0;
 
         if (message == nullptr) {
             siren_printf(SIREN_ERROR, "[SirenBase::responseThread] read null message");
@@ -141,26 +162,8 @@ void SirenBase::responseThreadHandler() {
         }
         break;
         case SIREN_REQUEST_MSG_DESTROY: {
-            siren_printf(SIREN_INFO, "read message DESTROY");
-            //tell process exit
-            PreprocessVociePackage *voicePackage = new PreprocessVociePackage;
-            voicePackage->msg = SIREN_REQUEST_MSG_DESTROY;
-            voicePackage->data = nullptr;
-            voicePackage->size = 0;
-            processQueue.push((void *)voicePackage);
-
-            //tell proxy response thread exit
-            Message msg;
-            msg.msg = SIREN_RESPONSE_MSG_ON_DESTROY;
-            msg.len = 0;
-            resultWriter.writeMessage(&msg, nullptr);
-
-            recordingExit.store(true, std::memory_order_release);
-            if (!recordingStart) {
-                std::unique_lock<decltype(recordingMutex)> l_(recordingMutex);
-                recordingStart = true;
-                recordingCond.notify_one();
-            }
+            siren_printf(SIREN_INFO, "read message DESTROY all");
+            destroy_siren();
             message->release();
             return;
         }
@@ -179,10 +182,8 @@ void SirenBase::launchResponseThread() {
 }
 
 void SirenBase::responseInitDone() {
-    Message msg;
-    msg.msg = SIREN_RESPONSE_MSG_ON_INIT_OK;
-    msg.len = 0;
-    resultWriter.writeMessage(&msg, nullptr);
+    Message msg(SIREN_RESPONSE_MSG_ON_INIT_OK);
+    resultWriter.writeMessage(&msg);
 }
 
 void SirenBase::launchProcessThread() {
@@ -192,9 +193,9 @@ void SirenBase::launchProcessThread() {
 
 void SirenBase::processThreadHandler() {
     siren_printf(SIREN_INFO, "process start");
-    SirenAudioProcessor audioProcessor(frameSize);
-    if (audioProcessor.init(config) != SIREN_STATUS_OK) {
-        siren_printf(SIREN_ERROR, "siren init failed");
+    SirenAudioVBVProcessor audioProcessor(config);
+    if (audioProcessor.init() != SIREN_STATUS_OK) {
+        siren_printf(SIREN_ERROR, "siren processor init failed");
         processInitFailed = true;
         processThreadInit = false;
         initCond.notify_one();
@@ -205,7 +206,7 @@ void SirenBase::processThreadHandler() {
     initCond.notify_one();
 
     while (1) {
-        PreprocessVociePackage *pVoicePackage = nullptr;
+        PreprocessVoicePackage *pVoicePackage = nullptr;
         ProcessedVoiceResult *pVoiceResult = nullptr;
         int status = 0;
         status = processQueue.pop((void **)&pVoicePackage, nullptr);
@@ -234,10 +235,9 @@ void SirenBase::processThreadHandler() {
                 continue;
             }
 
-            Message msg;
-            msg.msg = SIREN_RESPONSE_MSG_ON_VOICE_EVENT;
-            msg.len = sizeof(struct ProcessedVoiceResult) + pVoiceResult->size;
-            resultWriter.writeMessage(&msg, pVoiceResult->data);
+            Message *msg = Message::allocateMessage(SIREN_RESPONSE_MSG_ON_VOICE_EVENT, sizeof(ProcessedVoiceResult) + pVoiceResult->size);
+            memcpy(msg->data, pVoiceResult->data, pVoiceResult->size); 
+            resultWriter.writeMessage(msg);
             pVoicePackage->release();
             pVoiceResult->release();
             continue;
@@ -270,14 +270,27 @@ void SirenBase::waitingProcessInit() {
 }
 
 void SirenBase::loopRecording() {
-    Message msg;
-    msg.msg = SIREN_RESPONSE_MSG_ON_INIT_OK;
-    msg.len = 0;
-    resultWriter.writeMessage(&msg, nullptr);
-#define CONFIG_RECORDING_DEBUG 1
+    SirenAudioPreProcessor preProcessor(frameSize, config);
+    if (preProcessor.init() != SIREN_STATUS_OK) {
+        siren_printf(SIREN_ERROR, "siren preprocessor init failed");
+        //tell process exit
+        PreprocessVoicePackage *voicePackage = new PreprocessVoicePackage;
+        voicePackage->msg = SIREN_REQUEST_MSG_DESTROY;
+        voicePackage->data = nullptr;
+        voicePackage->size = 0;
+        processQueue.push((void *)voicePackage);
+
+        Message msg(SIREN_RESPONSE_MSG_ON_INIT_FAILED);
+        resultWriter.writeMessage(&msg);
+        return;
+    }
+
+    Message msg(SIREN_RESPONSE_MSG_ON_INIT_OK);
+    resultWriter.writeMessage(&msg);
+//#define CONFIG_RECORDING_DEBUG 1
 #ifdef CONFIG_RECORDING_DEBUG
     std::ofstream recordingDebugStream;
-    recordingDebugStream.open("/data/test.pcm", std::ios::out|std::ios::binary);
+    recordingDebugStream.open("/data/test.pcm", std::ios::out | std::ios::binary);
 #endif
 
 
@@ -318,6 +331,7 @@ void SirenBase::loopRecording() {
             siren_printf(SIREN_WARNING, "recording debug frame is not open!");
         }
 #endif
+        //do preprocess
 
     }
 
@@ -334,21 +348,23 @@ void SirenBase::main() {
     if (processInitFailed) {
         siren_printf(SIREN_ERROR, "process init failed");
         //tell siren proxy we init failed
-        Message msg;
-        msg.msg = SIREN_RESPONSE_MSG_ON_INIT_FAILED;
-        msg.len = 0;
-        resultWriter.writeMessage(&msg, nullptr);
+        Message msg(SIREN_RESPONSE_MSG_ON_INIT_FAILED);
+        resultWriter.writeMessage(&msg);
     }
 
     //we need to known proxy response thread has started
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     //start response thread
     launchResponseThread();
-
     loopRecording();
     siren_printf(SIREN_INFO, "waiting base response thread confirm exiting");
     if (responseThread.joinable()) {
         responseThread.join();
+    }
+
+    siren_printf(SIREN_INFO, "waiting process thread exit");
+    if (processThread.joinable()) {
+        processThread.join();
     }
 }
 

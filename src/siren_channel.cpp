@@ -19,21 +19,46 @@
 #include "sutils.h"
 #include "siren_channel.h"
 
-static void setnonblocking(int sock) {             
-    int opts;                               
-    opts = fcntl(sock, F_GETFL);            
-    if(opts < 0) {                          
-        perror("fcntl(sock,GETFL)");        
-        exit(1);                            
-    }                                       
-    opts = opts | O_NONBLOCK;               
-    if(fcntl(sock, F_SETFL, opts) < 0) {    
-        perror("fcntl(sock,SETFL,opts)");   
-        exit(1);                            
-    }                                       
-}                                           
+
+static void setnonblocking(int sock) {
+    int opts;
+    opts = fcntl(sock, F_GETFL);
+    if(opts < 0) {
+        perror("fcntl(sock,GETFL)");
+        exit(1);
+    }
+    opts = opts | O_NONBLOCK;
+    if(fcntl(sock, F_SETFL, opts) < 0) {
+        perror("fcntl(sock,SETFL,opts)");
+        exit(1);
+    }
+}
 
 namespace BlackSiren {
+
+Message* Message::allocateMessage(int msg, int len) {
+    char *pBuffer = new char [sizeof(Message) + len];
+    if (pBuffer == nullptr) {
+        return nullptr;
+    }
+    memset (pBuffer, 0, sizeof(Message) + len);
+    Message *pMessage = (Message *)pBuffer;
+    pMessage->magic[0] = 'a';
+    pMessage->magic[1] = 'a';
+    pMessage->magic[2] = 'b';
+    pMessage->magic[3] = 'b';
+
+    pMessage->msg = msg;
+    pMessage->len = len;
+    if (len == 0) {
+        pMessage->data = nullptr;
+    } else {
+        pMessage->data = pBuffer + sizeof(Message);
+    }
+
+    return pMessage;
+}
+
 
 SirenSocketReader::~SirenSocketReader() {
     if (isPrepareOnReadSide) {
@@ -54,7 +79,7 @@ void SirenSocketReader::prepareOnReadSideProcess() {
         return;
     }
 
-	setnonblocking(channel->sockets[1]);
+    setnonblocking(channel->sockets[1]);
     struct epoll_event eventItemReader;
     memset(&eventItemReader, 0, sizeof(struct epoll_event));
     eventItemReader.events = EPOLLIN;
@@ -80,12 +105,12 @@ static bool checkMagic(const char *buff) {
     return !checkfail;
 }
 
-int SirenSocketReader::pollMessage(Message **msg, char **data) {
+int SirenSocketReader::pollMessage(Message **msg) {
     if (!isPrepareOnReadSide) {
         siren_printf(SIREN_ERROR, "not prepare on read side");
         return SIREN_CHANNEL_NOT_PREPARE;
     }
-    
+
     //pollOnce'
     for (;;) {
         struct epoll_event item;
@@ -101,47 +126,23 @@ int SirenSocketReader::pollMessage(Message **msg, char **data) {
             continue;
         }
 
-        //add lock
-        channel->mtx.lock();
-
         siren_printf(SIREN_INFO, "read message");
-        char magic[4];
-        read(channel->sockets[1], magic, 4);
+        Message temp;
+        Message *rmsg = nullptr;
 
-        if (!checkMagic(magic)) {
+        read(channel->sockets[1], &temp, sizeof(Message));
+        if (!checkMagic(temp.magic)) {
             siren_printf(SIREN_ERROR, "check magic failed!!");
-            channel->mtx.unlock();
             return SIREN_CHANNEL_MAGIC_ERROR;
         }
-
-        Message msg_;
-        read(channel->sockets[1], (char *)&msg_, sizeof(struct Message));
-        siren_printf(SIREN_INFO, "read msg data len %d", msg_.len);
-        char *pdata = nullptr;
-        Message *rmsg_ = nullptr;
-
-        if (msg_.len == 0) {
-            rmsg_ = new Message;
-            rmsg_->len = msg_.len;
-            rmsg_->msg = msg_.msg;
-            *msg = rmsg_;
-            *data = nullptr;
-        } else if (msg_.len > 0) {
-            pdata = (char *)malloc(sizeof(struct Message) + msg_.len);
-            read(channel->sockets[1], pdata + sizeof(struct Message), msg_.len);
-            rmsg_ = (struct Message *)pdata;
-            rmsg_->len = msg_.len;
-            rmsg_->msg = msg_.msg;
-            *msg = rmsg_;
-            *data = (char *)(pdata + sizeof(struct Message));
-        } else {
-            channel->mtx.unlock();
-            *msg = nullptr;
-            *data = nullptr;
-            return SIREN_CHANNEL_INVALID_LEN;
+        siren_printf(SIREN_INFO, "read msg data len %d", temp.len);
+        rmsg = Message::allocateMessage(temp.msg, temp.len);
+        if (temp.len != 0) {
+            read(channel->sockets[1], rmsg->data, rmsg->len); 
         }
 
-        channel->mtx.unlock();
+        *msg = rmsg;
+       
         return SIREN_CHANNEL_OK;
     }
 }
@@ -156,35 +157,20 @@ void SirenSocketWriter::prepareOnWriteSideProcess() {
     isPrepareOnWriteSide = true;
 }
 
-int SirenSocketWriter::writeMessage(Message *msg, char *data) {
+int SirenSocketWriter::writeMessage(Message *msg) {
     if (!isPrepareOnWriteSide) {
         siren_printf(SIREN_ERROR, "not prepare on write side");
         return SIREN_CHANNEL_NOT_PREPARE;
     }
 
-    
-    if (msg == nullptr || msg->len < 0) {
+    if (msg == nullptr)  {
         siren_printf(SIREN_ERROR, "invalid msg");
         return SIREN_CHANNEL_ERROR;
     }
 
-    if (data == nullptr && msg->len != 0) {
-        siren_printf(SIREN_ERROR, "zero len with null data");
-        return SIREN_CHANNEL_ERROR;
-    }
-
     siren_printf(SIREN_INFO, "send message %d with len %d", msg->msg, msg->len);
-
-    channel->mtx.lock();
-    const char *magic = "aabb";
-    write (channel->sockets[0], magic, 4);
-
-    write (channel->sockets[0], (char *)msg, sizeof(struct Message));
-    if (msg->len != 0) {
-        write (channel->sockets[0], data, msg->len);
-    }
-
-    channel->mtx.unlock();
+    write (channel->sockets[0], msg, sizeof(Message) + msg->len);
+    
     return SIREN_CHANNEL_OK;
 }
 

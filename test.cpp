@@ -129,7 +129,7 @@ void ChannelTest::thread_handler() {
     BlackSiren::Message *msg = nullptr;
     char *data = nullptr;
     for (;;) {
-        if (reader.pollMessage(&msg, &data) != BlackSiren::SIREN_CHANNEL_OK) {
+        if (reader.pollMessage(&msg) != BlackSiren::SIREN_CHANNEL_OK) {
             std::cout << "error!!!!!" << std::endl;
         } else {
             std::cout << "read message !!!" << std::endl;
@@ -297,6 +297,6 @@ int main(void) {
     //test_thread_hardware_concurrency();
     //test_fork_socketpair();
 
-    //test_init();
-    test_recording();
+    test_init();
+    //test_recording();
 }
