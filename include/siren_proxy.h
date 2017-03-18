@@ -70,9 +70,13 @@ private:
 class SirenProxy : public ISiren {
 public:
     SirenProxy() :
+        stateChangeCallback([this](void *token, int current){
+            siren_printf(SIREN_INFO, "recv change callback with current state %d", current);     
+        }),
         requestResponseLaunch(false),
         waitingInit(false),
         sirenBaseInitFailed(false),
+        waitStateChange(false),
         requestThreadStop(false),
         allocated_from_thread(false),
         global_config(nullptr),
@@ -116,6 +120,7 @@ public:
     void requestThreadHandler();
     void responseThreadHandler();
 private:
+    std::function<void(void*, int)> stateChangeCallback; 
     void *token;
     
     friend class RecordingThread;
@@ -135,7 +140,11 @@ private:
     std::mutex requestCallbackMutex;
     std::condition_variable requestCond;
     std::vector<InterstedResponse> waitMessage;
-    
+   
+    std::mutex stateChangeMutex;
+    std::condition_variable stateChangeCond;
+    bool waitStateChange;
+
     std::thread requestThread;
     std::atomic_bool requestThreadStop;
 
@@ -157,6 +166,7 @@ private:
 
     LFQueue requestQueue;  
     int siren_pid;
+    siren_state_t prevState; 
 };
 
 

@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <mutex>
 #include <condition_variable>
+#include <functional>
 
 #include "lfqueue.h"
 #include "siren_channel.h"
@@ -43,6 +44,7 @@ public:
     void processThreadHandler();
     void main();
 private:
+    std::function<void(int)> onStateChanged;
     std::thread responseThread;
     void launchResponseThread();
     

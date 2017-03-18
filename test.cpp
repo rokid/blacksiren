@@ -241,7 +241,9 @@ void on_err_input_stream(void *token) {
 }
 
 void on_voice_event(void *token, int len, siren_event_t event,
-                    void *buff, int has_sl, int has_voice, double sl_degree, int has_voice_print) {
+                    void *buff, int has_sl, int has_voice,
+                    double sl_degree, double energy, double threshold,
+                    int has_voice_print) {
     siren_printf(BlackSiren::SIREN_INFO, "on voice event");
 }
 

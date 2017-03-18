@@ -33,7 +33,7 @@ typedef struct {
 
 typedef void (*on_voice_event_t)(void *token, int length, siren_event_t event,
                                  void *buff, int has_sl,
-                                 int has_voice, double sl_degree,
+                                 int has_voice, double sl_degree, double energy, double threshold,
                                  int has_voiceprint);
 
 typedef struct {

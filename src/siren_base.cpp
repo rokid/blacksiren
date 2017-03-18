@@ -2,10 +2,14 @@
 #include <sys/wait.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/resource.h>
+#include <sys/stat.h>
+#include <sys/syscall.h>
 #include <unistd.h>
 #include <cstdio>
 #include <error.h>
 #include <string.h>
+#include <sched.h>
 
 #include <mutex>
 #include <condition_variable>
@@ -60,6 +64,7 @@ siren_status_t SirenBase::init_siren(void *token, const char *path, siren_input_
 }
 
 void SirenBase::start_siren_process_stream(siren_proc_callback_t *callback) {
+    ((void)callback);
     siren_printf(SIREN_INFO, "base recording thread start");
     std::unique_lock<decltype(recordingMutex)> l_(recordingMutex);
     recordingStart = true;
@@ -67,7 +72,7 @@ void SirenBase::start_siren_process_stream(siren_proc_callback_t *callback) {
 }
 
 void SirenBase::start_siren_raw_stream(siren_raw_stream_callback_t *callback) {
-
+    ((void)callback);
 }
 
 void SirenBase::stop_siren_process_stream() {
@@ -85,11 +90,25 @@ void SirenBase::stop_siren_stream() {
 }
 
 void SirenBase::set_siren_state(siren_state_t state, siren_state_changed_callback_t *callback) {
-
+    ((void)callback);
+    PreprocessVoicePackage *voicePackage =
+        PreprocessVoicePackage::allocatePreprocessVoicePackage(SIREN_REQUEST_MSG_SET_STATE,
+                0, sizeof(int));
+    int *t = nullptr;
+    t = (int *)voicePackage->data;
+    t[0] = state;
+    processQueue.push((void *)voicePackage);
 }
 
 void SirenBase::set_siren_steer(float ho, float var) {
-
+    PreprocessVoicePackage *voicePackage =
+        PreprocessVoicePackage::allocatePreprocessVoicePackage(SIREN_REQUEST_MSG_SET_STEER,
+                0, sizeof(float) * 2);
+    float *t = nullptr;
+    t = (float *)voicePackage->data;
+    t[0] = ho;
+    t[1] = var;
+    processQueue.push((void *)voicePackage);
 }
 
 void SirenBase::destroy_siren() {
@@ -151,10 +170,24 @@ void SirenBase::responseThreadHandler() {
         break;
         case SIREN_REQUEST_MSG_SET_STATE: {
             siren_printf(SIREN_INFO, "read message SET_STATE");
+            if (message->len == sizeof(int)) {
+                int *state = (int *)message->data;
+                set_siren_state(state[0], nullptr);
+            } else {
+                siren_printf(SIREN_ERROR, "read SET_STATE but size is not correct, expect %d but %d",
+                        (int)sizeof(int), message->len);
+            }
         }
         break;
         case SIREN_REQUEST_MSG_SET_STEER: {
             siren_printf(SIREN_INFO, "read message SET_STEER");
+            if (message->len == sizeof(float) * 2) {
+                float *degrees = (float *)message->data;
+                set_siren_steer(degrees[0], degrees[1]);
+            } else {
+                siren_printf(SIREN_ERROR, "read SET_STEER but size is not correct, expect %d but %d",
+                        (int)sizeof(int), message->len);
+            }
         }
         break;
         case SIREN_REQUEST_MSG_REBUILD_VT_WORD_LIST: {
@@ -193,7 +226,34 @@ void SirenBase::launchProcessThread() {
 
 void SirenBase::processThreadHandler() {
     siren_printf(SIREN_INFO, "process start");
-    SirenAudioVBVProcessor audioProcessor(config);
+    struct sched_param param;
+    int maxpri;
+
+    maxpri = sched_get_priority_max(SCHED_FIFO);
+    if (maxpri != -1) {
+        param.sched_priority = maxpri;
+        if (sched_setscheduler(getpid(), SCHED_FIFO, &param) == -1) {
+            siren_printf(SIREN_WARNING, "set priority to SCHED_FIFO %d failed", maxpri);
+            setpriority(PRIO_PROCESS, getpid(), -20);
+        } else {
+            siren_printf(SIREN_INFO, "set priority to SCHED_FIFO %d", maxpri);
+        }
+    } else {
+        siren_printf(SIREN_WARNING, "get max priority for SCHED_FIFO failed");
+        setpriority(PRIO_PROCESS, getpid(), -20);
+    }
+
+    onStateChanged = [this](int state) {
+        int *t = nullptr;
+        Message *msg = Message::allocateMessage(SIREN_RESPONSE_MSG_ON_CALLBACK, sizeof(int) * 2);
+        t = (int *)msg->data;
+        t[0] = SIREN_CALLBACK_ON_STATE_CHANGED;
+        t[1] = state;
+        resultWriter.writeMessage(msg);
+        msg->release();
+    };
+
+    SirenAudioVBVProcessor audioProcessor(config, onStateChanged);
     if (audioProcessor.init() != SIREN_STATUS_OK) {
         siren_printf(SIREN_ERROR, "siren processor init failed");
         processInitFailed = true;
@@ -207,7 +267,7 @@ void SirenBase::processThreadHandler() {
 
     while (1) {
         PreprocessVoicePackage *pVoicePackage = nullptr;
-        ProcessedVoiceResult *pVoiceResult = nullptr;
+        std::vector<ProcessedVoiceResult*> *pVoiceResult = nullptr;
         int status = 0;
         status = processQueue.pop((void **)&pVoicePackage, nullptr);
         if (status < 0) {
@@ -235,19 +295,36 @@ void SirenBase::processThreadHandler() {
                 continue;
             }
 
-            Message *msg = Message::allocateMessage(SIREN_RESPONSE_MSG_ON_VOICE_EVENT, sizeof(ProcessedVoiceResult) + pVoiceResult->size);
-            memcpy(msg->data, pVoiceResult->data, pVoiceResult->size); 
-            resultWriter.writeMessage(msg);
+            for (ProcessedVoiceResult *p : *pVoiceResult) {
+                Message *msg = Message::allocateMessage(SIREN_RESPONSE_MSG_ON_VOICE_EVENT, sizeof(ProcessedVoiceResult) + p->size);
+                memcpy(msg->data, p->data, p->size);
+                resultWriter.writeMessage(msg);
+                p->release();
+                p = nullptr;
+            }
+
             pVoicePackage->release();
-            pVoiceResult->release();
+            pVoiceResult->clear();
+            delete pVoiceResult;
             continue;
         }
 
         switch (pVoicePackage->msg) {
         case SIREN_REQUEST_MSG_SET_STATE: {
-        } break;
+            int *t = (int *)pVoicePackage->data;
+            int state = t[0];
+            siren_printf(SIREN_INFO, "man set state to %d", state);
+            audioProcessor.setSysState(state);
+        }
+        break;
         case SIREN_REQUEST_MSG_SET_STEER: {
-        } break;
+            float *t = (float *)pVoicePackage->data;
+            float ho = t[0];
+            float ver = t[1];
+            siren_printf(SIREN_INFO, "set steer %f %f", ho, ver);
+            audioProcessor.setSysSteer(ho, ver);
+        }
+        break;
         case SIREN_REQUEST_MSG_REBUILD_VT_WORD_LIST: {
         } break;
         case SIREN_REQUEST_MSG_DESTROY: {
@@ -295,7 +372,7 @@ void SirenBase::loopRecording() {
 
 
     while (1) {
-        PreprocessVoicePackage *pPreVoicePackage = nullptr; 
+        PreprocessVoicePackage *pPreVoicePackage = nullptr;
         {
             std::unique_lock<decltype(recordingMutex)> l_(recordingMutex);
             recordingCond.wait(l_, [this] {
@@ -324,7 +401,7 @@ void SirenBase::loopRecording() {
                 continue;
             }
         }
-        
+
         //do preprocess
         preProcessor.preprocess(frameBuffer, &pPreVoicePackage);
         if (pPreVoicePackage == nullptr) {
@@ -343,7 +420,7 @@ void SirenBase::loopRecording() {
 #endif
 
     }
-    
+
     siren_printf(SIREN_INFO, "siren recording exits now");
 }
 

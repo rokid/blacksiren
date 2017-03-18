@@ -20,6 +20,7 @@
 #include "siren_base.h"
 #include "siren_proxy.h"
 #include "siren_config.h"
+#include "siren_alg.h"
 
 namespace BlackSiren {
 
@@ -412,11 +413,45 @@ void SirenProxy::responseThreadHandler() {
         case SIREN_RESPONSE_MSG_ON_STATE_CHANGED: {
         } break;
         case SIREN_RESPONSE_MSG_ON_VOICE_EVENT: {
-        } break;
+            ProcessedVoiceResult *pProcessedVoiceResult = (ProcessedVoiceResult *) msg->data;
+            if (pProcessedVoiceResult != nullptr) {
+                int size = pProcessedVoiceResult->size;
+                char *pData = nullptr;
+                //need to fix ptr
+                if (size != 0) {
+                    pData = (char *)pProcessedVoiceResult + sizeof(ProcessedVoiceResult);
+                    pProcessedVoiceResult->data = pData;
+                }
+                proc_callback->voice_event_callback(token, size, (siren_event_t)pProcessedVoiceResult->prop,
+                                                    pData, pProcessedVoiceResult->hasSL, pProcessedVoiceResult->hasVoice,
+                                                    pProcessedVoiceResult->sl, pProcessedVoiceResult->energy,
+                                                    pProcessedVoiceResult->threshold, pProcessedVoiceResult->debug
+                                                   );
+            } else {
+                siren_printf(SIREN_ERROR, "read voice result nullptr");
+            }
+        }
+        break;
         case SIREN_RESPONSE_MSG_ON_RAW_VOICE: {
         } break;
         case SIREN_RESPONSE_MSG_ON_CALLBACK: {
-        } break;
+            int *t = nullptr;
+            t = (int *)msg->data;
+            int callbackType = t[0];
+            switch (callbackType) {
+            case SIREN_CALLBACK_ON_STATE_CHANGED: {
+                prevState = t[1];
+                {
+                    std::unique_lock<decltype(stateChangeMutex)> l_(stateChangeMutex);
+                    waitStateChange = true;
+                    stateChangeCond.notify_one();
+                }
+                stateChangeCallback(token, prevState); 
+            }
+            break;
+            }
+        }
+        break;
         case SIREN_RESPONSE_MSG_ON_DESTROY: {
             siren_printf(SIREN_INFO, "proxy response read destroy msg");
             destroy = true;
@@ -474,11 +509,33 @@ void SirenProxy::stop_siren_stream() {
 }
 
 void SirenProxy::set_siren_state(siren_state_t state, siren_state_changed_callback_t *callback) {
-
+    Message *req = Message::allocateMessage(SIREN_REQUEST_MSG_SET_STATE, sizeof(int));
+    int *state_ = (int *)req->data;
+    state_[0] = (int)state;
+    if (callback != nullptr) {
+        stateChangeCallback = callback->state_changed_callback;
+        requestQueue.push(req);
+    } else {
+        waitStateChange = false;
+        requestQueue.push(req);
+        {
+            std::unique_lock<decltype(stateChangeMutex)> l_(stateChangeMutex);
+            if (!stateChangeCond.wait_for(l_, std::chrono::seconds(3),
+            [this] {
+            return waitStateChange;
+        })) {
+                siren_printf(SIREN_WARNING, "set state change callback timeout");
+            }
+        }
+    }
 }
 
 void SirenProxy::set_siren_steer(float ho, float var) {
-
+    Message *req = Message::allocateMessage(SIREN_REQUEST_MSG_SET_STEER, sizeof(float) * 2);
+    float *degrees = (float *)req->data;
+    degrees[0] = ho;
+    degrees[1] = var;
+    requestQueue.push(req);
 }
 
 void SirenProxy::destroy_siren() {

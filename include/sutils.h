@@ -24,6 +24,8 @@ enum {
 void set_sig_child_handler();
 void unset_sig_child_handler();
 
+
+
 #ifdef CONFIG_NO_STDOUT_DEBUG
 #define siren_debug_print_timestamp do{}while(0)
 #define siren_printf(args...) do{}while(0)

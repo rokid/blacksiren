@@ -1,9 +1,11 @@
 #ifndef SIREN_ALG_H_
 #define SIREN_ALG_H_
-
+#include <functional>
 
 // USE LEGACY INTERFACE
 //TODO: use new interface instead
+
+#include <vector>
 
 #include "legacy/r2ad1.h"
 #include "legacy/r2ad2.h"
@@ -18,13 +20,16 @@ struct ProcessedVoiceResult {
     int size;
     int debug;
     int prop;
-    int block;
     int hasSL;
     int hasVoice;
     double sl;
     char *data;
+    double energy;
+    double threshold;
+    static ProcessedVoiceResult *allocateProcessedVoiceResult(int size, int debug, int prop,
+            int hasSL, int hasVoice, double sl, double energy, double threshold);
     void release() {
-        delete this;
+        delete (char *)this;
     }
 } ;
 
@@ -38,6 +43,8 @@ struct PreprocessVoicePackage {
         delete (char *)this;
     }
 };
+
+typedef void (*on_state_changed)(int current);
 
 class SirenAudioPreProcessor {
 public:
@@ -61,25 +68,32 @@ private:
 
 class SirenAudioVBVProcessor {
 public:
-    SirenAudioVBVProcessor(SirenConfig &config_) :
+    SirenAudioVBVProcessor(SirenConfig &config_, std::function<void(int)>& stateCallback_) :
+        stateCallback(stateCallback_),
         config(config_),
-        r2v_state(r2ssp_state_sleep) {}    
+        r2v_state(r2ssp_state_sleep),
+        setState(false) {}    
     ~SirenAudioVBVProcessor() = default;
-    void process(PreprocessVoicePackage *voicePackage, ProcessedVoiceResult **result);
-     
+    int process(PreprocessVoicePackage *voicePackage, std::vector<ProcessedVoiceResult*> **result);
+
+    bool hasSlInfo(int prop);
+    bool hasVoice(int prop);
+
+    void setSysState(int state);
+    void setSysSteer(float ho, float ver);
 
     siren_status_t init();
     siren_status_t destroy();
 
 private:
+    std::function<void(int)>& stateCallback;
     SirenConfig &config;
-
     //asr state
     r2v_sys_state r2v_state;
-    
+    bool setState;
+
     //current lan
     int currentLan;    
-
     //legacy processor
     r2ad2_htask ad2;
     bool ad2Init;
