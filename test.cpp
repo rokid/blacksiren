@@ -201,11 +201,13 @@ void test_channel() {
 }
 
 
+std::ofstream recordingDebugStream;
 std::ifstream test_recording_stream;
 siren_t siren;
 int init_input_stream(void *token) {
     siren_printf(BlackSiren::SIREN_INFO, "init input stream");
     test_recording_stream.open("/data/debug0.pcm", std::ios::in | std::ios::binary);
+    recordingDebugStream.open("/data/test.pcm", std::ios::out | std::ios::binary);
     return 0;
 }
 
@@ -240,11 +242,63 @@ void on_err_input_stream(void *token) {
     siren_printf(BlackSiren::SIREN_INFO, "on err input stream");
 }
 
+const char *eventToString(siren_event_t event) {
+    switch(event) {
+    case SIREN_EVENT_VAD_START:
+        return "vad_start";
+    case SIREN_EVENT_VAD_DATA:
+        return "vad_data";
+    case SIREN_EVENT_VAD_END:
+        return "vad_end";
+    case SIREN_EVENT_VAD_CANCEL:
+        return "vad_cancel";
+    case SIREN_EVENT_WAKE_VAD_START:
+        return "wake_vad_start";
+    case SIREN_EVENT_WAKE_VAD_DATA:
+        return "wake_vad_data";
+    case SIREN_EVENT_WAKE_VAD_END:
+        return "wake_vad_end";
+    case SIREN_EVENT_WAKE_PRE:
+        return "wake_pre";
+    case SIREN_EVENT_WAKE_NOCMD:
+        return "wake_nocmd";
+    case SIREN_EVENT_WAKE_CMD:
+        return "wake_cmd";
+    case SIREN_EVENT_SLEEP:
+        return "sleep";
+    case SIREN_EVENT_HOTWORD:
+        return "hotword";
+    case SIREN_EVENT_SR:
+        return "sr";
+    case SIREN_EVENT_VOICE_PRINT:
+        return "voice_print";
+    case SIREN_EVENT_DIRTY:
+        return "dirty";
+    default: {
+        siren_printf(BlackSiren::SIREN_WARNING, "unknown event %d", (int)event);
+        return "unknown event";
+    }
+    }
+}
+
 void on_voice_event(void *token, int len, siren_event_t event,
                     void *buff, int has_sl, int has_voice,
-                    double sl_degree, double energy, double threshold,
-                    int has_voice_print) {
-    siren_printf(BlackSiren::SIREN_INFO, "on voice event");
+                    double sl_degree, double energy, double threshold, int has_voice_print) {
+    siren_printf(BlackSiren::SIREN_INFO,
+                 "rcv event %s with len %d, has_sl %d, has_voice %d, energy %f, threshold %f",
+                 eventToString(event), len, has_sl, has_voice, energy, threshold);
+    if (has_sl == 1) {
+        siren_printf(BlackSiren::SIREN_INFO, "sl degree %f", sl_degree);
+    }
+
+    if (has_voice == 1) {
+        if (recordingDebugStream.is_open()) {
+            recordingDebugStream.write((char *)buff, len);
+        } else {
+            siren_printf(BlackSiren::SIREN_WARNING, "recording debug frame is not open!");
+        }
+
+    }
 }
 
 void test_init() {

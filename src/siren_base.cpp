@@ -364,7 +364,7 @@ void SirenBase::loopRecording() {
 
     Message msg(SIREN_RESPONSE_MSG_ON_INIT_OK);
     resultWriter.writeMessage(&msg);
-#define CONFIG_RECORDING_DEBUG 1
+//#define CONFIG_RECORDING_DEBUG 1
 #ifdef CONFIG_RECORDING_DEBUG
     std::ofstream recordingDebugStream;
     recordingDebugStream.open("/data/test.pcm", std::ios::out | std::ios::binary);
