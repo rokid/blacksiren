@@ -200,17 +200,22 @@ void SirenAudioVBVProcessor::setSysSteer(float ho, float ver) {
 
 // legacy vbv process just for testing
 int SirenAudioVBVProcessor::process(PreprocessVoicePackage *voicePackage,
-        std::vector<ProcessedVoiceResult *> **result) {
+        std::vector<ProcessedVoiceResult *> &result) {
     if (voicePackage == nullptr) {
         return 0;
     }
 
+    if (!result.empty()) {
+        result.clear();
+        siren_printf(SIREN_ERROR, "result vector is not empty before process!");
+        return 0;
+    }
+    
     if (voicePackage->data == nullptr || voicePackage->size == 0) {
         siren_printf(SIREN_ERROR, "pre voice package's data is null or len is 0");
         return 0;
     }
 
-    std::vector<ProcessedVoiceResult *> *pResultVector;
     int asrFlag = (r2v_state == r2ssp_state_awake) ? 1 : 0;
     if (setState) {
         setState = false;
@@ -229,7 +234,9 @@ int SirenAudioVBVProcessor::process(PreprocessVoicePackage *voicePackage,
     double sl = 0.0;
     ProcessedVoiceResult *pProcessedVoiceResult = nullptr;
     r2ad2_getmsg2(ad2, &ppR2ad_msg_block, &block_num);
-    pResultVector = new std::vector<ProcessedVoiceResult *>(block_num);
+    if (block_num == 0) {
+        return 0;
+    }
     
     for (int i = 0; i < block_num; i++) {
         if (ppR2ad_msg_block[i]->iMsgId == r2ad_awake_nocmd) {
@@ -275,10 +282,9 @@ int SirenAudioVBVProcessor::process(PreprocessVoicePackage *voicePackage,
                                     hasSL, hasV, sl, energy, threshold);
         }
 
-        pResultVector->push_back(pProcessedVoiceResult);
+        result.push_back(pProcessedVoiceResult);
     }
 
-    *result = pResultVector;
     return block_num;
 }
 

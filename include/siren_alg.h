@@ -71,10 +71,10 @@ public:
     SirenAudioVBVProcessor(SirenConfig &config_, std::function<void(int)>& stateCallback_) :
         stateCallback(stateCallback_),
         config(config_),
-        r2v_state(r2ssp_state_sleep),
+        r2v_state(r2ssp_state_awake),
         setState(false) {}    
     ~SirenAudioVBVProcessor() = default;
-    int process(PreprocessVoicePackage *voicePackage, std::vector<ProcessedVoiceResult*> **result);
+    int process(PreprocessVoicePackage *voicePackage, std::vector<ProcessedVoiceResult*> &result);
 
     bool hasSlInfo(int prop);
     bool hasVoice(int prop);

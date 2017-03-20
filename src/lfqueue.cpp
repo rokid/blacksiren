@@ -71,35 +71,35 @@ static inline int inc_if_le0(volatile int *p) {
 
 int LFCounter::inc(struct timespec *timeout, bool block) {
     int err = 0;
-    int val_ = 0;
-    if ((val_ = inc_if_le0(&this->val)) <= 0) {
+    int val = 0;
+    if ((val = inc_if_le0(&this->val)) <= 0) {
     } else if (!block) {
-        val_ = __sync_fetch_and_add(&this->val, 1);
+        val = __sync_fetch_and_add(&this->val, 1);
     } else {
         __sync_add_and_fetch(&this->waiters, 1);
         while (1) {
-            if (-110 == (err = futex_wait(&this->val, val_, timeout))) {
-                val_ = __sync_fetch_and_add(&this->val, 1);
+            if (-110 == (err = futex_wait(&this->val, val, timeout))) {
+                val = __sync_fetch_and_add(&this->val, 1);
                 break;
             }
-            if ((val_ = inc_if_le0(&this->val)) <= 0) {
+            if ((val = inc_if_le0(&this->val)) <= 0) {
                 break;
             }
         } 
         __sync_add_and_fetch(&this->waiters, -1);
     }
-    return val_;
+    return val;
 }
 
 int LFCounter::dec(struct timespec *timeout) {
     int err = 0;
-    int val_ = 0;
-    if ((val_ = dec_if_gt0(&this->val)) > 0) {
+    int val = 0;
+    if ((val = dec_if_gt0(&this->val)) > 0) {
     } else {
         __sync_add_and_fetch(&this->waiters, 1);
         while (1) {
-            if (-ETIMEDOUT == (err = futex_wait(&this->val, val_, timeout))) {
-                val_ = __sync_fetch_and_add(&this->val, -1);
+            if (-ETIMEDOUT == (err = futex_wait(&this->val, val, timeout))) {
+                val = __sync_fetch_and_add(&this->val, -1);
                 break;
             }
 
@@ -109,7 +109,7 @@ int LFCounter::dec(struct timespec *timeout) {
         }
         __sync_add_and_fetch(&this->waiters, -1);
     }
-    return val_;
+    return val;
 }
 
 void LFCounter::wake() {
@@ -147,7 +147,8 @@ int LFItem::pop( void **data, struct timespec *end_time) {
     } else {
         counter_.wake_if_needed();
         while ((nullptr == (data_ = this->data_)
-                || !__sync_bool_compare_and_swap(&this->data_, data_, NULL)));
+                || !__sync_bool_compare_and_swap(&this->data_, data_, nullptr))) {
+        }
     }
     *data = data_;
     return err;

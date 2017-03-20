@@ -301,15 +301,10 @@ void SirenProxy::requestThreadHandler() {
 
         Message *req;
         int status = requestQueue.pop((void **)&req, nullptr);
-        if (status != 0) {
-            if (status == -2) {
-                siren_printf(SIREN_WARNING, "request queue overflow!");
-                std::this_thread::sleep_for(std::chrono::microseconds(100));
-                continue;
-            } else {
-                siren_printf(SIREN_ERROR, "errorcoid %d in request queue", status);
-                continue;
-            }
+        if (status == -2) {
+            siren_printf(SIREN_WARNING, "request queue overflow!");
+            std::this_thread::sleep_for(std::chrono::microseconds(100));
+            continue;
         }
 
         if (req == nullptr) {
@@ -380,7 +375,8 @@ void SirenProxy::responseThreadHandler() {
         if ((status = responseReader.pollMessage(&msg)) != SIREN_CHANNEL_OK) {
             siren_printf(SIREN_ERROR, "proxy response thread poll message failed with %d, response thread exit", status);
             std::this_thread::sleep_for(std::chrono::microseconds(100));
-            continue;
+            //continue;
+            return;
         }
 
         if (msg == nullptr) {
@@ -394,7 +390,6 @@ void SirenProxy::responseThreadHandler() {
                 std::unique_lock<decltype(initMutex)> l_(initMutex);
                 waitingInit = true;
                 initCond.notify_one();
-                return;
             }
         }
         break;
@@ -446,7 +441,7 @@ void SirenProxy::responseThreadHandler() {
                     waitStateChange = true;
                     stateChangeCond.notify_one();
                 }
-                stateChangeCallback(token, prevState); 
+                stateChangeCallback(token, prevState);
             }
             break;
             }

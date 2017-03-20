@@ -37,7 +37,7 @@ SirenBase::SirenBase(SirenConfig &config_, int socket_, SirenSocketReader &reade
     socket(socket_),
     recordingExit(false),
     recordingStart(false),
-    processQueue(256, nullptr),
+    processQueue(4*1024, nullptr),
     recordingQueue(256, nullptr) {
 
     int channels = config.mic_channel_num;
@@ -268,53 +268,53 @@ void SirenBase::processThreadHandler() {
     processThreadInit = true;
     initCond.notify_one();
 
+    //std::ofstream testRecordingDebugStream;
+    //testRecordingDebugStream.open("/data/debug2.pcm", std::ios::out | std::ios::binary);
+    std::vector<ProcessedVoiceResult*> voiceResult;
     while (1) {
         PreprocessVoicePackage *pVoicePackage = nullptr;
-        std::vector<ProcessedVoiceResult*> *pVoiceResult = nullptr;
+        voiceResult.clear();
         int status = 0;
         status = processQueue.pop((void **)&pVoicePackage, nullptr);
-        siren_printf(SIREN_INFO, "pop one frame");
-        if (status < 0) {
-            if (status == -2) {
-                siren_printf(SIREN_WARNING, "process queue overflow");
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                continue;
-            } else {
-                siren_printf(SIREN_ERROR, "process queue pop error");
-                continue;
-            }
+        if (status == -2) {
+            siren_printf(SIREN_WARNING, "process queue overflow");
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            continue;
         }
-
+        
         if (pVoicePackage == nullptr) {
             siren_printf(SIREN_ERROR, "process queue pop null item");
             continue;
         }
-
+        
+        
+        //testRecordingDebugStream.write((char *)pVoicePackage->data, pVoicePackage->size);
         //handle voice process
         if (pVoicePackage->msg == SIREN_REQUEST_MSG_DATA_PROCESS) {
-            audioProcessor.process(pVoicePackage, &pVoiceResult);
-            if (pVoiceResult == nullptr) {
-                siren_printf(SIREN_ERROR, "audio process with null result");
+            //testRecordingDebugStream.write((char *)pVoicePackage->data, pVoicePackage->size);
+            //siren_printf(SIREN_INFO, "start one frame process");
+            audioProcessor.process(pVoicePackage, voiceResult);
+            if (voiceResult.empty()) {
+                //siren_printf(SIREN_ERROR, "audio process with null result");
                 pVoicePackage->release();
                 continue;
             }
 
-            siren_printf(SIREN_INFO, "result len %d", (int)pVoiceResult->size());
-
-            for (ProcessedVoiceResult *p : *pVoiceResult) {
+            for (int i = 0; i < (int)voiceResult.size(); i++) {
+                ProcessedVoiceResult *p = voiceResult[i];
+                //siren_printf(SIREN_INFO, "send prop %d len %d hasV %d hasS %d sl %f",
+                //        p->prop, p->size, p->hasVoice, p->hasSL, p->sl);
                 Message *msg = Message::allocateMessage(SIREN_RESPONSE_MSG_ON_VOICE_EVENT, sizeof(ProcessedVoiceResult) + p->size);
-                memcpy(msg->data, p->data, p->size);
+                memcpy(msg->data, (char *)p, sizeof(ProcessedVoiceResult) + p->size);
                 resultWriter.writeMessage(msg);
                 p->release();
                 p = nullptr;
             }
-
+            
             pVoicePackage->release();
-            pVoiceResult->clear();
-            delete pVoiceResult;
+            //siren_printf(SIREN_INFO, "end one frame process");
             continue;
         }
-
         switch (pVoicePackage->msg) {
         case SIREN_REQUEST_MSG_SET_STATE: {
             int *t = (int *)pVoicePackage->data;
@@ -368,15 +368,11 @@ void SirenBase::loopRecording() {
         return;
     }
 
+    //std::ofstream testRecordingDebugStream;
+    //testRecordingDebugStream.open("/data/debug1.pcm", std::ios::out | std::ios::binary);
+
     Message msg(SIREN_RESPONSE_MSG_ON_INIT_OK);
     resultWriter.writeMessage(&msg);
-//#define CONFIG_RECORDING_DEBUG 1
-#ifdef CONFIG_RECORDING_DEBUG
-    std::ofstream recordingDebugStream;
-    recordingDebugStream.open("/data/test.pcm", std::ios::out | std::ios::binary);
-#endif
-
-
     while (1) {
         PreprocessVoicePackage *pPreVoicePackage = nullptr;
         {
@@ -392,7 +388,6 @@ void SirenBase::loopRecording() {
         }
 
         int status = 0;
-        //siren_printf(SIREN_INFO, "base read");
         status = read(socket, frameBuffer, frameSize);
         //siren_printf(SIREN_INFO, "read %d byte", status);
         if (status <= 0) {
@@ -415,19 +410,12 @@ void SirenBase::loopRecording() {
             continue;
         }
 
+        //testRecordingDebugStream.write((char *)pPreVoicePackage->data, pPreVoicePackage->size);
+
         status = processQueue.push((void *)pPreVoicePackage);
         if (status != 0) {
             siren_printf(SIREN_INFO, "push error %d", status);
-        } 
-        //now we can precess first frame of data
-#ifdef CONFIG_RECORDING_DEBUG
-        if (recordingDebugStream.is_open()) {
-            recordingDebugStream.write(pPreVoicePackage->data, pPreVoicePackage->size);
-            pPreVoicePackage->release();
-        } else {
-            siren_printf(SIREN_WARNING, "recording debug frame is not open!");
         }
-#endif
     }
 
     siren_printf(SIREN_INFO, "siren recording exits now");

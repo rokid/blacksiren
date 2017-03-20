@@ -13,8 +13,9 @@
 #include "siren.h"
 #include "sutils.h"
 #include "lfqueue.h"
-#include "easyr2_queue.h"
 #include "siren_channel.h"
+
+#include "easyr2_queue.h"
 
 void test_fork_socketpair() {
     int sockets[2], child;
@@ -77,41 +78,57 @@ void test_thread_start() {
     t1.join();
 }
 
-void test_fn_producer(BlackSiren::LFQueue &queue) {
+using BlackSiren::LFQueue;
+struct LFQueueTest {
+    LFQueueTest() : queue(1024 * 1024, nullptr){
+    //    easyr2_queue_init(&queue, 1024 * 1024, nullptr);
+    }
+    LFQueue queue;
+    //easyr2_queue queue;
+    void test_fn_producer();
+    void test_fn_consumer();
+    void launchProducer();
+
+    std::thread producer;
+};
+
+void LFQueueTest::test_fn_producer() {
     std::this_thread::sleep_for(std::chrono::seconds(3));
-    for (int i = 0; i < 100; i++) {
-        std::cout << "push " << i << std::endl;
+    for (int i = 0; i < 1000 * 1024; i++) {
+        //std::cout << "push " << i << std::endl;
         int *new_i = new int (i);
-        queue.push((void*)new_i);
+        queue.push((void *)new_i);
+        //easyr2_queue_push(&queue, (void *)new_i);
     }
     std::cout << "producer end" << std::endl;
 }
 
-void test_fn_consumer(BlackSiren::LFQueue &queue) {
-    for (int i = 0; i < 100; i++) {
+void LFQueueTest::test_fn_consumer() {
+    for (int i = 0; i < 1000 * 1024; i++) {
         int *new_i = nullptr;
-        std::cout << "START READ" << std::endl;
         int status = 0;
         status = queue.pop((void **)&new_i, nullptr);
+        //status = easyr2_queue_pop(&queue, (void **)&new_i, nullptr);
         if (new_i == nullptr) {
             std::cout << "nullptr:" << status << std::endl;
-            continue;
+            break;
         }
         std::cout << "READ " << *new_i << std::endl;
         delete new_i;
     }
 }
 
+void LFQueueTest::launchProducer() {
+    std::thread t1(&LFQueueTest::test_fn_producer, this);
+    producer = std::move(t1);
+}
+
 void test_common() {
     BlackSiren::siren_printf(BlackSiren::SIREN_INFO, "hello world");
-    BlackSiren::LFQueue queue(1024, nullptr);
-    //BlackSiren::easyr2_queue queue2;
-
-    std::thread t1(test_fn_producer, std::ref(queue));
-    std::thread t2(test_fn_consumer, std::ref(queue));
-
-    t1.join();
-    t2.join();
+    LFQueueTest test;
+    test.launchProducer();
+    test.test_fn_consumer();
+    test.producer.join();
 }
 
 struct ChannelTest {
@@ -223,13 +240,14 @@ void stop_input_stream(void *token) {
     siren_printf(BlackSiren::SIREN_INFO, "stop input stream");
 }
 
+bool stopRecording = false;
 int read_input_stream(void *token,  char *buff, int len) {
     //siren_printf(BlackSiren::SIREN_INFO, "read input stream");
     test_recording_stream.read(buff, len);
     if (!test_recording_stream) {
         siren_printf(BlackSiren::SIREN_INFO, "read end of file");
         if (siren != 0) {
-            std::this_thread::sleep_for(std::chrono::seconds(1));
+            std::this_thread::sleep_for(std::chrono::seconds(100));
             stop_siren_process_stream(siren);
             return 0;
         }
@@ -332,7 +350,7 @@ void test_recording() {
     input_callback.read_input = read_input_stream;
 
     proc_callback.voice_event_callback = on_voice_event;
-    siren = init_siren(nullptr, "/data/test.json", &input_callback);
+    siren = init_siren(nullptr, nullptr, &input_callback);
     if (siren == 0) {
         siren_printf(BlackSiren::SIREN_INFO, "init siren failed");
         return;

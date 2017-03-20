@@ -4,6 +4,7 @@
 #include <atomic>
 #include <time.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "common.h"
 #include "os.h"
@@ -14,7 +15,6 @@ namespace BlackSiren {
 #define ERR_OVERFLOW -2
 
 struct LFCounter {
-public :
     LFCounter(): val(0), waiters(0) {}
     ~LFCounter() {
     }
@@ -27,15 +27,11 @@ public :
     void wake();
     void wake_if_needed();
 
-    friend int dec_if_gt0(LFCounter&);
-    friend int inc_if_le0(LFCounter&);
-private :
     volatile int val;
     volatile int waiters;
 };
 
 struct LFItem {
-public:
     LFItem() {
         data_ = nullptr;
     }
@@ -48,14 +44,13 @@ public:
 
     int push(void *data, struct timespec* end_time, bool block);
     int pop(void ** data, struct timespec *end_time);
-private:
+    
     LFCounter counter_;
     void * volatile data_;
 };
 
 
-class LFQueue {
-public:
+struct LFQueue {
     LFQueue(uint32_t len, void *buf) :
         push_(0), pop_(0), item_(nullptr), allocated_(nullptr),
         queued_item_(0) {
@@ -66,15 +61,17 @@ public:
                 position++;
             }
             len = static_cast<uint32_t>(1 << position);
+            siren_printf(SIREN_INFO, "change len to %d", len);
         }
 
         if (buf == nullptr) {
             buf = malloc(sizeof (struct LFItem) * len);
+            memset(buf, 0, sizeof(LFItem) * len);
             allocated_ = (void *)buf;
         }
 
         SIREN_ASSERT(buf != nullptr);
-        item_ = (struct LFItem *)buf;
+        item_ = (LFItem *)buf;
         pos_mask_ = len - 1;
     }
 
@@ -95,7 +92,6 @@ public:
     uint32_t remain();
     void reset();
 
-private:
     volatile unsigned long push_;
     volatile unsigned long pop_;
     unsigned long pos_mask_;
