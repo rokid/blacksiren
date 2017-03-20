@@ -91,7 +91,14 @@ enum {
 
 class SirenConfigurationManager {
 public:
-    SirenConfigurationManager(const char *file) : config_file_path(file){}
+    SirenConfigurationManager(const char *file) {
+        if (file == nullptr) {
+            validPath = false;
+        } else {
+            config_file_path = file;
+            validPath = true;
+        }    
+    }
     ~SirenConfigurationManager() {}
     config_error_t parseConfigFile();
     SirenConfig& getConfigFile() {
@@ -99,6 +106,7 @@ public:
     }
     
 private:
+    bool validPath;
     std::string config_file_path;
     SirenConfig siren_config;
 };

@@ -19,22 +19,24 @@ namespace BlackSiren {
 
 config_error_t SirenConfigurationManager::parseConfigFile() {
     config_error_t error_status = CONFIG_OK;
-    if (config_file_path.empty()) {
-        siren_printf(SIREN_ERROR, "config file path is empty!");
-        error_status = CONFIG_ERROR_OPEN_FILE;
-    }
-
-    if (error_status != CONFIG_OK) {
-        std::ifstream istream(config_file_path);
-        if (!istream.good()) {
-            siren_printf(SIREN_ERROR, "config file is not exist or other error");
+    if (validPath) {
+        if (config_file_path.empty()) {
+            siren_printf(SIREN_ERROR, "config file path is empty!");
             error_status = CONFIG_ERROR_OPEN_FILE;
         }
 
         if (error_status != CONFIG_OK) {
-            std::stringstream string_buffer;
-            string_buffer << istream.rdbuf();
-            std::string contents(string_buffer.str());
+            std::ifstream istream(config_file_path);
+            if (!istream.good()) {
+                siren_printf(SIREN_ERROR, "config file is not exist or other error");
+                error_status = CONFIG_ERROR_OPEN_FILE;
+            }
+
+            if (error_status != CONFIG_OK) {
+                std::stringstream string_buffer;
+                string_buffer << istream.rdbuf();
+                std::string contents(string_buffer.str());
+            }
         }
     }
 
