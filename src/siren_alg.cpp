@@ -111,17 +111,20 @@ void SirenAudioPreProcessor::preprocess(char *rawBuffer, PreprocessVoicePackage 
 
     int aec = 0;
     if (rawBuffer == nullptr) {
+        siren_printf(SIREN_ERROR, "raw buffer is null");
         return;
     }
 
     aec = r2ad1_putdata(ad1, rawBuffer, frameSize);
     int len = r2ad1_getdatalen(ad1);
     if (len <= 0) {
+        siren_printf(SIREN_ERROR, "r2ad1_getdatalen return 0");
         return;
     }
 
     PreprocessVoicePackage *vp = PreprocessVoicePackage::allocatePreprocessVoicePackage(SIREN_REQUEST_MSG_DATA_PROCESS, aec, len);
     if (vp == nullptr) {
+        siren_printf(SIREN_ERROR, "allocatePreprocessVoicePackage FAILED");
         return;
     }
 

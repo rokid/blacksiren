@@ -15,7 +15,7 @@ namespace BlackSiren {
 
 struct LFCounter {
 public :
-    LFCounter(): _val(0), val(0), waiters(0) {}
+    LFCounter(): val(0), waiters(0) {}
     ~LFCounter() {
     }
 
@@ -30,18 +30,17 @@ public :
     friend int dec_if_gt0(LFCounter&);
     friend int inc_if_le0(LFCounter&);
 private :
-    volatile int _val;
-    std::atomic_int val;
-    std::atomic_int waiters;
+    volatile int val;
+    volatile int waiters;
 };
 
 struct LFItem {
 public:
     LFItem() {
-        _data = nullptr;
+        data_ = nullptr;
     }
     ~LFItem() {
-        _data = nullptr;
+        data_ = nullptr;
     }
 
     LFItem(const LFItem &) = delete;
@@ -50,16 +49,16 @@ public:
     int push(void *data, struct timespec* end_time, bool block);
     int pop(void ** data, struct timespec *end_time);
 private:
-    LFCounter counter;
-    std::atomic<void *> _data;
+    LFCounter counter_;
+    void * volatile data_;
 };
 
 
 class LFQueue {
 public:
     LFQueue(uint32_t len, void *buf) :
-        push_(0), pop_(0), item(nullptr), allocated(nullptr),
-        queued_item(0) {
+        push_(0), pop_(0), item_(nullptr), allocated_(nullptr),
+        queued_item_(0) {
         SIREN_ASSERT(len != 0);
         if (((~len + 1) & len) != len) {
             uint32_t position = 0;
@@ -71,20 +70,20 @@ public:
 
         if (buf == nullptr) {
             buf = malloc(sizeof (struct LFItem) * len);
-            allocated = (void *)buf;
+            allocated_ = (void *)buf;
         }
 
         SIREN_ASSERT(buf != nullptr);
-        item = (struct LFItem *)buf;
-        pos_mask = len - 1;
+        item_ = (struct LFItem *)buf;
+        pos_mask_ = len - 1;
     }
 
     ~LFQueue() {
-        if (allocated == nullptr) {
+        if (allocated_ == nullptr) {
             return;
         }
 
-        free (allocated);
+        free (allocated_);
     }
 
     LFQueue(const LFQueue &) = delete;
@@ -97,12 +96,12 @@ public:
     void reset();
 
 private:
-    std::atomic_ulong push_;
-    std::atomic_ulong pop_;
-    uint32_t pos_mask;
-    LFItem * item;
-    void *allocated;
-    std::atomic_int queued_item;
+    volatile unsigned long push_;
+    volatile unsigned long pop_;
+    unsigned long pos_mask_;
+    LFItem * item_;
+    void *allocated_;
+    int queued_item_;
 };
 
 }

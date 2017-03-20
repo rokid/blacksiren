@@ -180,7 +180,7 @@ void RecordingThread::recordingFn() {
 
         //send to other side
         len = write(sockets[0], frameBuffer, frameSize);
-        siren_printf(SIREN_INFO, "recording write return %d", len);
+        //siren_printf(SIREN_INFO, "recording write return %d", len);
         if (len < 0) {
             siren_printf(SIREN_ERROR, "write error on socket with %s", strerror(errno));
             //pause();

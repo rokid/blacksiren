@@ -37,7 +37,7 @@ SirenBase::SirenBase(SirenConfig &config_, int socket_, SirenSocketReader &reade
     socket(socket_),
     recordingExit(false),
     recordingStart(false),
-    processQueue(64, nullptr),
+    processQueue(256, nullptr),
     recordingQueue(256, nullptr) {
 
     int channels = config.mic_channel_num;
@@ -175,7 +175,7 @@ void SirenBase::responseThreadHandler() {
                 set_siren_state(state[0], nullptr);
             } else {
                 siren_printf(SIREN_ERROR, "read SET_STATE but size is not correct, expect %d but %d",
-                        (int)sizeof(int), message->len);
+                             (int)sizeof(int), message->len);
             }
         }
         break;
@@ -186,7 +186,7 @@ void SirenBase::responseThreadHandler() {
                 set_siren_steer(degrees[0], degrees[1]);
             } else {
                 siren_printf(SIREN_ERROR, "read SET_STEER but size is not correct, expect %d but %d",
-                        (int)sizeof(int), message->len);
+                             (int)sizeof(int), message->len);
             }
         }
         break;
@@ -226,6 +226,7 @@ void SirenBase::launchProcessThread() {
 
 void SirenBase::processThreadHandler() {
     siren_printf(SIREN_INFO, "process start");
+#ifdef CONFIG_USE_FIFO
     struct sched_param param;
     int maxpri;
 
@@ -242,7 +243,9 @@ void SirenBase::processThreadHandler() {
         siren_printf(SIREN_WARNING, "get max priority for SCHED_FIFO failed");
         setpriority(PRIO_PROCESS, getpid(), -20);
     }
-
+#else
+    setpriority(PRIO_PROCESS, getpid(), -20);
+#endif
     onStateChanged = [this](int state) {
         int *t = nullptr;
         Message *msg = Message::allocateMessage(SIREN_RESPONSE_MSG_ON_CALLBACK, sizeof(int) * 2);
@@ -270,6 +273,7 @@ void SirenBase::processThreadHandler() {
         std::vector<ProcessedVoiceResult*> *pVoiceResult = nullptr;
         int status = 0;
         status = processQueue.pop((void **)&pVoicePackage, nullptr);
+        siren_printf(SIREN_INFO, "pop one frame");
         if (status < 0) {
             if (status == -2) {
                 siren_printf(SIREN_WARNING, "process queue overflow");
@@ -294,6 +298,8 @@ void SirenBase::processThreadHandler() {
                 pVoicePackage->release();
                 continue;
             }
+
+            siren_printf(SIREN_INFO, "result len %d", (int)pVoiceResult->size());
 
             for (ProcessedVoiceResult *p : *pVoiceResult) {
                 Message *msg = Message::allocateMessage(SIREN_RESPONSE_MSG_ON_VOICE_EVENT, sizeof(ProcessedVoiceResult) + p->size);
@@ -386,9 +392,9 @@ void SirenBase::loopRecording() {
         }
 
         int status = 0;
-        siren_printf(SIREN_INFO, "base read");
+        //siren_printf(SIREN_INFO, "base read");
         status = read(socket, frameBuffer, frameSize);
-        siren_printf(SIREN_INFO, "read %d byte", status);
+        //siren_printf(SIREN_INFO, "read %d byte", status);
         if (status <= 0) {
             siren_printf(SIREN_INFO, "read returns %d", status);
             if (recordingExit.load(std::memory_order_acquire)) {
@@ -409,6 +415,10 @@ void SirenBase::loopRecording() {
             continue;
         }
 
+        status = processQueue.push((void *)pPreVoicePackage);
+        if (status != 0) {
+            siren_printf(SIREN_INFO, "push error %d", status);
+        } 
         //now we can precess first frame of data
 #ifdef CONFIG_RECORDING_DEBUG
         if (recordingDebugStream.is_open()) {
@@ -418,7 +428,6 @@ void SirenBase::loopRecording() {
             siren_printf(SIREN_WARNING, "recording debug frame is not open!");
         }
 #endif
-
     }
 
     siren_printf(SIREN_INFO, "siren recording exits now");

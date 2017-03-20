@@ -55,52 +55,38 @@ static inline int futex_wait(volatile int* p, int val, struct timespec* timeout)
     return err;
 }
 
-static inline int dec_if_gt0(std::atomic_int &val, volatile int *p) {
+static inline int dec_if_gt0(volatile int *p) {
     int x = 0;
-    while ((x = val.load(std::memory_order_acquire)) > 0 &&
-            !val.compare_exchange_weak(x, x - 1,
-                                       std::memory_order_acq_rel, std::memory_order_relaxed));
-    *p = val.load();
+    while ((x = *p) > 0 &&
+            !__sync_bool_compare_and_swap(p, x, x - 1));
     return x;
 }
 
-static inline int inc_if_le0(std::atomic_int &val, volatile int *p) {
+static inline int inc_if_le0(volatile int *p) {
     int x = 0;
-    while ((x = val.load(std::memory_order_acquire)) <= 0 &&
-            !val.compare_exchange_weak(x, x + 1,
-                                       std::memory_order_acq_rel, std::memory_order_relaxed));
-    *p = val.load();
+    while ((x = *p) <= 0 &&
+                !__sync_bool_compare_and_swap(p, x, x + 1));
     return x;
-}
-
-int dec_if_gt0(LFCounter &counter) {
-    return dec_if_gt0(counter.val, &counter._val);
-}
-
-int inc_if_le0(LFCounter &counter) {
-    return inc_if_le0(counter.val, &counter._val);
 }
 
 int LFCounter::inc(struct timespec *timeout, bool block) {
     int err = 0;
     int val_ = 0;
-    if ((val_ = inc_if_le0(*this)) <= 0) {
+    if ((val_ = inc_if_le0(&this->val)) <= 0) {
     } else if (!block) {
-        val_ = val.fetch_add(1);
-        _val = val.load();
+        val_ = __sync_fetch_and_add(&this->val, 1);
     } else {
-        waiters.fetch_add(1, std::memory_order_relaxed);
+        __sync_add_and_fetch(&this->waiters, 1);
         while (1) {
-            if (-110 == (err = futex_wait(&this->_val, val_, timeout))) {
-                val_ = val.fetch_add(1);
-                _val = val.load();
+            if (-110 == (err = futex_wait(&this->val, val_, timeout))) {
+                val_ = __sync_fetch_and_add(&this->val, 1);
                 break;
             }
-            if ((val_ = inc_if_le0(*this)) <= 0) {
+            if ((val_ = inc_if_le0(&this->val)) <= 0) {
                 break;
             }
         } 
-        waiters.fetch_add(-1, std::memory_order_relaxed);
+        __sync_add_and_fetch(&this->waiters, -1);
     }
     return val_;
 }
@@ -108,29 +94,30 @@ int LFCounter::inc(struct timespec *timeout, bool block) {
 int LFCounter::dec(struct timespec *timeout) {
     int err = 0;
     int val_ = 0;
-    if ((val_ = dec_if_gt0(*this)) > 0) {
+    if ((val_ = dec_if_gt0(&this->val)) > 0) {
     } else {
-        waiters.fetch_add(1, std::memory_order_relaxed);
+        __sync_add_and_fetch(&this->waiters, 1);
         while (1) {
-            if (-ETIMEDOUT == (err = futex_wait(&this->_val, val_, timeout))) {
-                val_ = val.fetch_add(-1);
-                _val = val.load();
+            if (-ETIMEDOUT == (err = futex_wait(&this->val, val_, timeout))) {
+                val_ = __sync_fetch_and_add(&this->val, -1);
+                break;
             }
-            if ((val_ = dec_if_gt0(*this)) > 0) {
+
+            if ((val = dec_if_gt0(&this->val)) > 0) {
                 break;
             }
         }
-        waiters.fetch_add(-1, std::memory_order_relaxed);
+        __sync_add_and_fetch(&this->waiters, -1);
     }
     return val_;
 }
 
 void LFCounter::wake() {
-    futex_wake(&_val, INT32_MAX);
+    futex_wake(&this->val, INT32_MAX);
 }
 
 void LFCounter::wake_if_needed() {
-    if (waiters.load(std::memory_order_relaxed) > 0) {
+    if (waiters > 0) {
         wake();
     }
 }
@@ -138,18 +125,15 @@ void LFCounter::wake_if_needed() {
 int LFItem::push( void *pdata, struct timespec *end_time, bool block) {
     int err = 0;
     int old_val = 0;
-    if ((old_val = counter.inc(end_time, block)) < 0) {
-        counter.wake_if_needed();
+    if ((old_val = counter_.inc(end_time, block)) < 0) {
+        counter_.wake_if_needed();
         err = -1;
     } else if (old_val > 0) {
-        counter.wake_if_needed();
+        counter_.wake_if_needed();
         err = -2;
     } else {
-        void *t = nullptr;
-        while (!_data.compare_exchange_weak(t, pdata,
-                                            std::memory_order_acq_rel,
-                                            std::memory_order_relaxed));
-        counter.wake_if_needed();
+        while (!__sync_bool_compare_and_swap(&this->data_, nullptr, pdata));
+        counter_.wake_if_needed();
     }
     return err;
 }
@@ -157,17 +141,13 @@ int LFItem::push( void *pdata, struct timespec *end_time, bool block) {
 int LFItem::pop( void **data, struct timespec *end_time) {
     int err = 0;
     void *data_ = nullptr;
-    if (counter.dec(end_time) != 1) {
-        std::cout<<"dec != 1"<<std::endl;
-        counter.wake_if_needed();
+    if (counter_.dec(end_time) != 1) {
+        counter_.wake_if_needed();
         err = -1;
     } else {
-        void *t = nullptr;
-        counter.wake_if_needed();
-        while ((nullptr == (data_ = _data.load(std::memory_order_acquire)))
-                || !_data.compare_exchange_weak(data_, t,
-                                                std::memory_order_acq_rel,
-                                                std::memory_order_relaxed));
+        counter_.wake_if_needed();
+        while ((nullptr == (data_ = this->data_)
+                || !__sync_bool_compare_and_swap(&this->data_, data_, NULL)));
     }
     *data = data_;
     return err;
@@ -176,10 +156,10 @@ int LFItem::pop( void **data, struct timespec *end_time) {
 int LFQueue::push (void *data) {
     int err = 0;
     while (1) {
-        unsigned long seq = push_.fetch_add(1, std::memory_order_relaxed);
-        LFItem *it = item + (seq & pos_mask);
-        if (0 == it->push(data, NULL, 0)) {
-            queued_item.fetch_add(1, std::memory_order_relaxed);
+        unsigned long long seq = __sync_fetch_and_add(&push_, 1);
+        LFItem *it = item_ + (seq & pos_mask_);
+        if (0 == (err = it->push(data, NULL, 0))) {
+            __sync_fetch_and_add(&queued_item_, 1);
             break;
         } else if (-1 == err) {
             continue;
@@ -193,10 +173,10 @@ int LFQueue::push (void *data) {
 
 int LFQueue::pop (void **data, struct timespec *timeout) {
     int err = 0;
-    unsigned long seq = pop_.fetch_add(1, std::memory_order_relaxed);
-    LFItem *it = item + (seq & pos_mask);
-    if (0 == it->pop(data, timeout)) {
-        queued_item.fetch_add(-1, std::memory_order_relaxed);
+    unsigned long long seq = __sync_fetch_and_add(&pop_, 1);
+    LFItem *it = item_ + (seq & pos_mask_);
+    if (0 == (err = it->pop(data, timeout))) {
+        __sync_fetch_and_add(&queued_item_, -1);
     }
 
     return err;
@@ -207,7 +187,7 @@ uint32_t LFQueue::remain() {
 }
 
 void LFQueue::reset() {
-    while (queued_item.load(std::memory_order_relaxed) > 0) {
+    while (queued_item_ > 0) {
         void *p;
         pop(&p, nullptr);
     }
