@@ -67,8 +67,8 @@ public:
     SirenAudioVBVProcessor(SirenConfig &config_, std::function<void(int)>& stateCallback_) :
         stateCallback(stateCallback_),
         config(config_),
-        r2v_state(r2ssp_state_awake),
-        setState(false) {}    
+        r2v_state(r2ssp_state_sleep)
+        {}    
     ~SirenAudioVBVProcessor() = default;
     int process(PreprocessVoicePackage *voicePackage, std::vector<ProcessedVoiceResult*> &result);
 
@@ -86,7 +86,6 @@ private:
     SirenConfig &config;
     //asr state
     r2v_sys_state r2v_state;
-    bool setState;
 
     //current lan
     int currentLan;    

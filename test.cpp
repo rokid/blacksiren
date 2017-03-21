@@ -237,7 +237,7 @@ void test_channel() {
     }
 }
 
-
+int magic = 233;
 std::ofstream recordingDebugStream;
 std::ifstream test_recording_stream;
 siren_t siren;
@@ -432,12 +432,19 @@ void on_err_xmos_input_stream(void *token) {
     siren_printf(BlackSiren::SIREN_INFO, "on err input stream");
 }
 
+void on_siren_state_changed_fn(void *token, int current) {
+    int *pm = (int *)token;
+    siren_printf(BlackSiren::SIREN_INFO, "magic is %d", *pm);
+    siren_printf(BlackSiren::SIREN_INFO, "set state to %d", current);
+}
 
 void test_xmos() {
 
     siren_input_if_t input_callback;
     siren_proc_callback_t proc_callback;
-
+    siren_state_changed_callback_t state_changed_callback;
+    
+    state_changed_callback.state_changed_callback = on_siren_state_changed_fn;
     input_callback.init_input = init_xmos_input_stream;
     input_callback.release_input = release_xmos_input_stream;
     input_callback.start_input = start_xmos_input_stream;
@@ -446,14 +453,26 @@ void test_xmos() {
     input_callback.read_input = read_xmos_input_stream;
 
     proc_callback.voice_event_callback = on_voice_event;
-    siren = init_siren(nullptr, nullptr, &input_callback);
+    siren = init_siren((void *)&magic, nullptr, &input_callback);
     if (siren == 0) {
         siren_printf(BlackSiren::SIREN_INFO, "init siren failed");
         return;
     }
-
     siren_printf(BlackSiren::SIREN_INFO, "start recording test");
     start_siren_process_stream(siren, &proc_callback);
+
+    std::thread t([&]{
+        std::this_thread::sleep_for(std::chrono::seconds(10));        
+        siren_printf(BlackSiren::SIREN_INFO, "test set state awake sync");
+        set_siren_state(siren, SIREN_STATE_AWAKE, nullptr);     
+        siren_printf(BlackSiren::SIREN_INFO, "now state is in wake");
+        std::this_thread::sleep_for(std::chrono::seconds(10));
+        siren_printf(BlackSiren::SIREN_INFO, "test set state sleep async");
+        set_siren_state(siren, SIREN_STATE_SLEEP, &state_changed_callback);  
+        std::this_thread::sleep_for(std::chrono::seconds(100));    
+    });
+
+    t.join();
 
     for (;;) {
         std::this_thread::sleep_for(std::chrono::seconds(10));

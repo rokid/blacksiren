@@ -197,10 +197,12 @@ siren_status_t SirenProxy::init_siren(void *token, const char *path, siren_input
         return SIREN_STATUS_ERROR;
     }
 
+    
     siren_status_t result = SIREN_STATUS_OK;
     result = global_config->parseConfigFile();
     SirenConfig& config = global_config->getConfigFile();
     input_callback = input;
+    this->token = token;
 
     //use share mem
     if (config.siren_use_share_mem) {

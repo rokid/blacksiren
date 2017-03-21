@@ -157,6 +157,7 @@ siren_status_t SirenAudioVBVProcessor::init() {
     ad2 = r2ad2_create();
     assert (ad2 != nullptr);
 
+    r2ad2_steer(ad2, 180.0, 0.0);
     return SIREN_STATUS_OK;
 }
 
@@ -192,6 +193,7 @@ bool SirenAudioVBVProcessor::hasVoice(int prop) {
 
 void SirenAudioVBVProcessor::setSysState(int state) {
     r2v_state = (r2v_sys_state)state;
+    stateCallback((int)r2v_state);
 }
 
 void SirenAudioVBVProcessor::setSysSteer(float ho, float ver) {
@@ -217,10 +219,6 @@ int SirenAudioVBVProcessor::process(PreprocessVoicePackage *voicePackage,
     }
 
     int asrFlag = (r2v_state == r2ssp_state_awake) ? 1 : 0;
-    if (setState) {
-        setState = false;
-        stateCallback((int)r2v_state);
-    }
     r2ad2_putaudiodata2(ad2, voicePackage->data, voicePackage->size, voicePackage->aec, 1, asrFlag, asrFlag);
     r2ad_msg_block **ppR2ad_msg_block = nullptr;
     int len = 0;
