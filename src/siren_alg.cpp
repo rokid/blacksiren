@@ -18,7 +18,7 @@
 
 namespace BlackSiren {
 
-PreprocessVoicePackage* PreprocessVoicePackage::allocatePreprocessVoicePackage(int msg, int aec, int size) {
+PreprocessVoicePackage* allocatePreprocessVoicePackage(int msg, int aec, int size) {
     PreprocessVoicePackage *vp = nullptr;
     char *temp = nullptr;
     int len = 0;
@@ -48,7 +48,7 @@ PreprocessVoicePackage* PreprocessVoicePackage::allocatePreprocessVoicePackage(i
     return vp;
 }
 
-ProcessedVoiceResult* ProcessedVoiceResult::allocateProcessedVoiceResult(int size, int debug, int prop, 
+ProcessedVoiceResult* allocateProcessedVoiceResult(int size, int debug, int prop, 
         int hasSL, int hasV, double sl, double energy, double threshold) {
     ProcessedVoiceResult *pvr = nullptr;
     char *temp = nullptr;
@@ -118,11 +118,11 @@ void SirenAudioPreProcessor::preprocess(char *rawBuffer, PreprocessVoicePackage 
     aec = r2ad1_putdata(ad1, rawBuffer, frameSize);
     int len = r2ad1_getdatalen(ad1);
     if (len <= 0) {
-        siren_printf(SIREN_ERROR, "r2ad1_getdatalen return 0");
+        //siren_printf(SIREN_ERROR, "r2ad1_getdatalen return 0");
         return;
     }
 
-    PreprocessVoicePackage *vp = PreprocessVoicePackage::allocatePreprocessVoicePackage(SIREN_REQUEST_MSG_DATA_PROCESS, aec, len);
+    PreprocessVoicePackage *vp = allocatePreprocessVoicePackage(SIREN_REQUEST_MSG_DATA_PROCESS, aec, len);
     if (vp == nullptr) {
         siren_printf(SIREN_ERROR, "allocatePreprocessVoicePackage FAILED");
         return;
@@ -271,14 +271,14 @@ int SirenAudioVBVProcessor::process(PreprocessVoicePackage *voicePackage,
             hasV = 1;
             energy = static_cast<double>(r2ad2_getenergy_Lastframe(ad2));
             threshold = static_cast<double>(r2ad2_getenergy_Threshold(ad2));
-            pProcessedVoiceResult = ProcessedVoiceResult::allocateProcessedVoiceResult(len, debug, prop,
+            pProcessedVoiceResult = allocateProcessedVoiceResult(len, debug, prop,
                                     hasSL, hasV, sl, energy, threshold);
             memcpy(pProcessedVoiceResult->data, ppR2ad_msg_block[i]->pMsgData, len);
         } else {
             hasV = 0;
             energy = 0.0;
             threshold = 0.0;
-            pProcessedVoiceResult = ProcessedVoiceResult::allocateProcessedVoiceResult(0, debug, prop,
+            pProcessedVoiceResult = allocateProcessedVoiceResult(0, debug, prop,
                                     hasSL, hasV, sl, energy, threshold);
         }
 

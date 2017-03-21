@@ -36,7 +36,7 @@ static void setnonblocking(int sock) {
 
 namespace BlackSiren {
 
-Message* Message::allocateMessage(int msg, int len) {
+Message* allocateMessage(int msg, int len) {
     char *pBuffer = new char [sizeof(Message) + len];
     if (pBuffer == nullptr) {
         return nullptr;
@@ -90,6 +90,8 @@ void SirenSocketReader::prepareOnReadSideProcess() {
         SIREN_ASSERT(false);
         return;
     }
+
+    setnonblocking(channel->sockets[1]);
     isPrepareOnReadSide = true;
 }
 
@@ -103,6 +105,11 @@ static bool checkMagic(const char *buff) {
     }
 
     return !checkfail;
+}
+
+static void dumpMessage(Message &temp) {
+    siren_printf(SIREN_INFO, "dump with message: magic %c%c%c%c, len %d msg %d data %p",
+                 temp.magic[0], temp.magic[1], temp.magic[2], temp.magic[3], temp.len, temp.msg, temp.data);
 }
 
 int SirenSocketReader::pollMessage(Message **msg) {
@@ -125,24 +132,50 @@ int SirenSocketReader::pollMessage(Message **msg) {
             siren_printf(SIREN_WARNING, "read fd not this reader side nfds = %d, prev = %d", item.data.fd, channel->sockets[1]);
             continue;
         }
-
+#ifdef CONFIG_DEBUG_CHANNEL
         siren_printf(SIREN_INFO, "read message");
+#endif
         Message temp;
         Message *rmsg = nullptr;
-
-        read(channel->sockets[1], &temp, sizeof(Message));
+        read(channel->sockets[1], (char *)&temp, sizeof(Message));
         if (!checkMagic(temp.magic)) {
             siren_printf(SIREN_ERROR, "check magic failed!!");
+            dumpMessage(temp);
             return SIREN_CHANNEL_MAGIC_ERROR;
         }
+#ifdef CONFIG_DEBUG_CHANNEL
         siren_printf(SIREN_INFO, "read msg data len %d", temp.len);
-        rmsg = Message::allocateMessage(temp.msg, temp.len);
+#endif
+        rmsg = allocateMessage(temp.msg, temp.len);
         if (temp.len != 0) {
-            read(channel->sockets[1], rmsg->data, rmsg->len); 
+            int readlen = temp.len;
+            char *offset = rmsg->data;
+            for (;;) {
+                int t = read(channel->sockets[1], offset, readlen);
+                if (t < 0) {
+                    if (errno == EAGAIN) {
+#ifdef CONFIG_DEBUG_CHANNEL
+                        continue;
+#endif 
+                    } else {
+                        siren_printf(SIREN_ERROR, "read error %s", strerror(errno));
+                    } 
+                } else {
+                    if (t != readlen) {
+                        readlen = readlen - t;
+                        offset += t;
+#ifdef CONFIG_DEBUG_CHANNEL
+                        siren_printf(SIREN_INFO, "need read %d have read %d", readlen, t);
+#endif
+                    } else {
+                        break;
+                    }
+                }
+            }
         }
 
         *msg = rmsg;
-       
+
         return SIREN_CHANNEL_OK;
     }
 }
@@ -168,9 +201,17 @@ int SirenSocketWriter::writeMessage(Message *msg) {
         return SIREN_CHANNEL_ERROR;
     }
 
+    std::lock_guard<decltype(writeGuard)> l_(writeGuard);
     siren_printf(SIREN_INFO, "send message %d with len %d", msg->msg, msg->len);
-    write (channel->sockets[0], msg, sizeof(Message) + msg->len);
-    
+    int t = write (channel->sockets[0], msg, sizeof(Message) + msg->len);
+    if (t <= 0) {
+        siren_printf(SIREN_ERROR, "write failed with %s", strerror(errno));
+    }
+
+    if (t != (int)sizeof(Message) + msg->len) {
+        siren_printf(SIREN_ERROR, "write %d, but expect %d",
+                     t, msg->len);
+    }
     return SIREN_CHANNEL_OK;
 }
 

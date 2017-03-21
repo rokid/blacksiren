@@ -11,6 +11,14 @@ ifdef CONFIG_LEGACY_SIREN_TEST
 L_CFLAGS += -DCONFIG_LEGACY_SIREN_TEST
 endif
 
+ifdef CONFIG_USE_FIFO
+L_CFLAGS += -DCONFIG_USE_FIFO
+endif
+
+ifdef CONFIG_DEBUG_CHANNEL
+L_CFLAGS += -DCONFIG_DEBUG_CHANNEL
+endif
+
 include $(CLEAR_VARS)
 LOCAL_PREBUILT_LIBS := \
 		libr2ssp:thirdparty/support/$(TARGET_ARCH)/libs/libr2ssp.so \
@@ -44,11 +52,11 @@ LOCAL_SRC_FILES:= \
 
 LOCAL_C_INCLUDES += \
 		$(THIRD_INCLUDES) \
-		$(LOCAL_PATH)/include
+		$(LOCAL_PATH)/include 
 
 LOCAL_CFLAGS:= $(L_CFLAGS) -Wall -Wextra -Werror -std=gnu++11 $(EXTRA_CFLAGS)
 LOCAL_MODULE:= libbsiren
-LOCAL_SHARED_LIBRARIES := liblog libr2ssp libztvad libztcodec2 libr2vt libr2audio
+LOCAL_SHARED_LIBRARIES := liblog libr2ssp libztvad libztcodec2 libr2vt libr2audio 
 LOCAL_STATIC_LIBRARIES += libjsonc_static
 
 include $(BUILD_SHARED_LIBRARY)
@@ -59,10 +67,12 @@ LOCAL_SRC_FILES := \
 	test.cpp
 
 LOCAL_C_INCLUDES += \
-		$(LOCAL_PATH)/include
+		$(LOCAL_PATH)/include \
+		robot/easyr2/include \
+		robot/hardware/include
 
 LOCAL_MODULE := test
-LOCAL_SHARED_LIBRARIES := libbsiren
+LOCAL_SHARED_LIBRARIES := libbsiren libeasyr2 libhardware
 
 include $(BUILD_EXECUTABLE)
 

@@ -32,7 +32,7 @@ RecordingThread::RecordingThread(SirenProxy *siren) :
     int channels = config.mic_channel_num;
     int sample = config.mic_sample_rate;
     int byte = config.mic_audio_byte;
-    int frameLenInMs = config.mic_frame_length;
+    int frameLenInMs = 1000 / config.mic_frame_length;
 
     frameSize = channels * sample * byte / frameLenInMs;
     siren_printf(SIREN_INFO, "recording thread set frame with %d", frameSize);
@@ -314,14 +314,14 @@ void SirenProxy::requestThreadHandler() {
 
         siren_printf(SIREN_INFO, "proxy request thread read msg %d", req->msg);
         if (req->msg == SIREN_REQUEST_MSG_DESTROY_ON_INIT) {
-            req->release();
+            delete (char *)req;
             return;
         }
 
         requestWriter.writeMessage(req);
         siren_printf(SIREN_INFO, "proxy request thread write msg %d to siren", req->msg);
 
-        req->release();
+        delete (char *)req;
         if (req->msg == SIREN_REQUEST_MSG_DESTROY) {
             return;
         }
@@ -343,7 +343,7 @@ void SirenProxy::stopRequestThread(bool onInit) {
     } else {
         msg = SIREN_REQUEST_MSG_DESTROY;
     }
-    Message *req = Message::allocateMessage(msg, 0);
+    Message *req = allocateMessage(msg, 0);
 
     requestQueue.push(req);
     siren_printf(SIREN_INFO, "waiting proxy request thread exit");
@@ -400,7 +400,7 @@ void SirenProxy::responseThreadHandler() {
                 sirenBaseInitFailed = true;
                 initCond.notify_one();
 
-                msg->release();
+                delete (char *)msg;
                 return;
             }
         }
@@ -408,6 +408,7 @@ void SirenProxy::responseThreadHandler() {
         case SIREN_RESPONSE_MSG_ON_STATE_CHANGED: {
         } break;
         case SIREN_RESPONSE_MSG_ON_VOICE_EVENT: {
+            siren_printf(SIREN_INFO, "on voice event");
             ProcessedVoiceResult *pProcessedVoiceResult = (ProcessedVoiceResult *) msg->data;
             if (pProcessedVoiceResult != nullptr) {
                 int size = pProcessedVoiceResult->size;
@@ -456,7 +457,7 @@ void SirenProxy::responseThreadHandler() {
         }
         }
 
-        msg->release();
+        delete (char *)msg;
         if (destroy) {
             break;
         }
@@ -478,7 +479,7 @@ void SirenProxy::launchResponseThread() {
 void SirenProxy::start_siren_process_stream(siren_proc_callback_t *callback) {
     proc_callback = callback;
 
-    Message *req = Message::allocateMessage(SIREN_REQUEST_MSG_START_PROCESS_STREAM, 0);
+    Message *req = allocateMessage(SIREN_REQUEST_MSG_START_PROCESS_STREAM, 0);
     requestQueue.push((void *)req);
     std::this_thread::sleep_for(std::chrono::microseconds(10));
     recordingThread->start();
@@ -489,7 +490,7 @@ void SirenProxy::start_siren_raw_stream(siren_raw_stream_callback_t *callback) {
 
 
 void SirenProxy::stop_siren_process_stream() {
-    Message *req = Message::allocateMessage(SIREN_REQUEST_MSG_STOP_PROCESS_STREAM, 0);
+    Message *req = allocateMessage(SIREN_REQUEST_MSG_STOP_PROCESS_STREAM, 0);
     requestQueue.push((void *)req);
     std::this_thread::sleep_for(std::chrono::microseconds(10));
     recordingThread->pause();
@@ -504,7 +505,7 @@ void SirenProxy::stop_siren_stream() {
 }
 
 void SirenProxy::set_siren_state(siren_state_t state, siren_state_changed_callback_t *callback) {
-    Message *req = Message::allocateMessage(SIREN_REQUEST_MSG_SET_STATE, sizeof(int));
+    Message *req = allocateMessage(SIREN_REQUEST_MSG_SET_STATE, sizeof(int));
     int *state_ = (int *)req->data;
     state_[0] = (int)state;
     if (callback != nullptr) {
@@ -526,7 +527,7 @@ void SirenProxy::set_siren_state(siren_state_t state, siren_state_changed_callba
 }
 
 void SirenProxy::set_siren_steer(float ho, float var) {
-    Message *req = Message::allocateMessage(SIREN_REQUEST_MSG_SET_STEER, sizeof(float) * 2);
+    Message *req = allocateMessage(SIREN_REQUEST_MSG_SET_STEER, sizeof(float) * 2);
     float *degrees = (float *)req->data;
     degrees[0] = ho;
     degrees[1] = var;

@@ -43,7 +43,7 @@ SirenBase::SirenBase(SirenConfig &config_, int socket_, SirenSocketReader &reade
     int channels = config.mic_channel_num;
     int sample = config.mic_sample_rate;
     int byte = config.mic_audio_byte;
-    int frameLenInMs = config.mic_frame_length;
+    int frameLenInMs = 1000/config.mic_frame_length;
 
     frameSize = channels * sample * byte / frameLenInMs;
     frameBuffer = new char[frameSize];
@@ -92,7 +92,7 @@ void SirenBase::stop_siren_stream() {
 void SirenBase::set_siren_state(siren_state_t state, siren_state_changed_callback_t *callback) {
     ((void)callback);
     PreprocessVoicePackage *voicePackage =
-        PreprocessVoicePackage::allocatePreprocessVoicePackage(SIREN_REQUEST_MSG_SET_STATE,
+        allocatePreprocessVoicePackage(SIREN_REQUEST_MSG_SET_STATE,
                 0, sizeof(int));
     int *t = nullptr;
     t = (int *)voicePackage->data;
@@ -102,7 +102,7 @@ void SirenBase::set_siren_state(siren_state_t state, siren_state_changed_callbac
 
 void SirenBase::set_siren_steer(float ho, float var) {
     PreprocessVoicePackage *voicePackage =
-        PreprocessVoicePackage::allocatePreprocessVoicePackage(SIREN_REQUEST_MSG_SET_STEER,
+        allocatePreprocessVoicePackage(SIREN_REQUEST_MSG_SET_STEER,
                 0, sizeof(float) * 2);
     float *t = nullptr;
     t = (float *)voicePackage->data;
@@ -197,7 +197,7 @@ void SirenBase::responseThreadHandler() {
         case SIREN_REQUEST_MSG_DESTROY: {
             siren_printf(SIREN_INFO, "read message DESTROY all");
             destroy_siren();
-            message->release();
+            delete (char *)message;
             return;
         }
         break;
@@ -205,7 +205,7 @@ void SirenBase::responseThreadHandler() {
             siren_printf(SIREN_ERROR, "[SirenBase::responseThread] read unknown message");
         }
         }
-        message->release();
+        delete (char *)message;
     }
 }
 
@@ -248,12 +248,12 @@ void SirenBase::processThreadHandler() {
 #endif
     onStateChanged = [this](int state) {
         int *t = nullptr;
-        Message *msg = Message::allocateMessage(SIREN_RESPONSE_MSG_ON_CALLBACK, sizeof(int) * 2);
+        Message *msg = allocateMessage(SIREN_RESPONSE_MSG_ON_CALLBACK, sizeof(int) * 2);
         t = (int *)msg->data;
         t[0] = SIREN_CALLBACK_ON_STATE_CHANGED;
         t[1] = state;
         resultWriter.writeMessage(msg);
-        msg->release();
+        delete (char *)msg;
     };
 
     SirenAudioVBVProcessor audioProcessor(config, onStateChanged);
@@ -287,7 +287,6 @@ void SirenBase::processThreadHandler() {
             continue;
         }
         
-        
         //testRecordingDebugStream.write((char *)pVoicePackage->data, pVoicePackage->size);
         //handle voice process
         if (pVoicePackage->msg == SIREN_REQUEST_MSG_DATA_PROCESS) {
@@ -296,7 +295,7 @@ void SirenBase::processThreadHandler() {
             audioProcessor.process(pVoicePackage, voiceResult);
             if (voiceResult.empty()) {
                 //siren_printf(SIREN_ERROR, "audio process with null result");
-                pVoicePackage->release();
+                delete (char *)pVoicePackage;
                 continue;
             }
 
@@ -304,14 +303,14 @@ void SirenBase::processThreadHandler() {
                 ProcessedVoiceResult *p = voiceResult[i];
                 //siren_printf(SIREN_INFO, "send prop %d len %d hasV %d hasS %d sl %f",
                 //        p->prop, p->size, p->hasVoice, p->hasSL, p->sl);
-                Message *msg = Message::allocateMessage(SIREN_RESPONSE_MSG_ON_VOICE_EVENT, sizeof(ProcessedVoiceResult) + p->size);
+                Message *msg = allocateMessage(SIREN_RESPONSE_MSG_ON_VOICE_EVENT, sizeof(ProcessedVoiceResult) + p->size);
                 memcpy(msg->data, (char *)p, sizeof(ProcessedVoiceResult) + p->size);
                 resultWriter.writeMessage(msg);
-                p->release();
+                delete (char *)p;
                 p = nullptr;
             }
             
-            pVoicePackage->release();
+            delete (char *)pVoicePackage;
             //siren_printf(SIREN_INFO, "end one frame process");
             continue;
         }
@@ -334,14 +333,14 @@ void SirenBase::processThreadHandler() {
         case SIREN_REQUEST_MSG_REBUILD_VT_WORD_LIST: {
         } break;
         case SIREN_REQUEST_MSG_DESTROY: {
-            pVoicePackage->release();
+            delete (char *)pVoicePackage;
             audioProcessor.destroy();
             siren_printf(SIREN_INFO, "process thread exit");
             return;
         }
         }
 
-        pVoicePackage->release();
+        delete (char *)pVoicePackage;
     }
 }
 
@@ -391,7 +390,7 @@ void SirenBase::loopRecording() {
         status = read(socket, frameBuffer, frameSize);
         //siren_printf(SIREN_INFO, "read %d byte", status);
         if (status <= 0) {
-            siren_printf(SIREN_INFO, "read returns %d", status);
+            siren_printf(SIREN_INFO, "read returns %d since %s", status, strerror(errno));
             if (recordingExit.load(std::memory_order_acquire)) {
                 siren_printf(SIREN_INFO, "base recording thread request exit");
                 preProcessor.destroy();
@@ -406,10 +405,10 @@ void SirenBase::loopRecording() {
         //do preprocess
         preProcessor.preprocess(frameBuffer, &pPreVoicePackage);
         if (pPreVoicePackage == nullptr) {
-            siren_printf(SIREN_ERROR, "preprocess failed");
+            //may contain empty voice skip
+            //siren_printf(SIREN_ERROR, "preprocess failed");
             continue;
         }
-
         //testRecordingDebugStream.write((char *)pPreVoicePackage->data, pPreVoicePackage->size);
 
         status = processQueue.push((void *)pPreVoicePackage);

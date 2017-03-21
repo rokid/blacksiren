@@ -13,7 +13,7 @@
 
 #include "siren.h"
 #include "siren_config.h"
-
+#include "common.h"
 namespace BlackSiren {
 
 struct ProcessedVoiceResult {
@@ -22,30 +22,26 @@ struct ProcessedVoiceResult {
     int prop;
     int hasSL;
     int hasVoice;
+    int padding;
     double sl;
-    char *data;
     double energy;
     double threshold;
-    static ProcessedVoiceResult *allocateProcessedVoiceResult(int size, int debug, int prop,
-            int hasSL, int hasVoice, double sl, double energy, double threshold);
-    void release() {
-        delete (char *)this;
-    }
+    char *data;
 } ;
 
 struct PreprocessVoicePackage {
     int msg;
     int aec;
     int size;
+    int padding;
     char *data;
-    static PreprocessVoicePackage *allocatePreprocessVoicePackage(int msg, int aec, int size);
-    void release() {
-        delete (char *)this;
-    }
-};
+} ;
+
+ProcessedVoiceResult *allocateProcessedVoiceResult(int size, int debug, int prop,
+            int hasSL, int hasVoice, double sl, double energy, double threshold);
+PreprocessVoicePackage *allocatePreprocessVoicePackage(int msg, int aec, int size);
 
 typedef void (*on_state_changed)(int current);
-
 class SirenAudioPreProcessor {
 public:
     SirenAudioPreProcessor(int size, SirenConfig &config_):

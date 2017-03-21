@@ -47,14 +47,9 @@ struct Message {
     int msg;
 	int len;
     char *data;
-    void release() {
-		delete ((char *)this);
-	}
+}; 
 
-    static Message* allocateMessage(int msg, int len);
-};
-
-
+Message* allocateMessage(int msg, int len);
 struct InterstedResponse {
     Message message;
     std::function<void(int)> callback;
@@ -85,6 +80,7 @@ public:
     void prepareOnWriteSideProcess();
     int writeMessage(Message *message);
 private:
+    std::mutex writeGuard;
     bool isPrepareOnWriteSide = false;
     int socket;
     SirenSocketChannel *channel;
