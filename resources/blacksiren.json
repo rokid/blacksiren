@@ -1,0 +1,48 @@
+{
+	"basic_config": {
+		"mic_channel_num":8,
+		"mic_sample_rate":48000,
+		"mic_audio_byte":4,
+		"mic_frame_length"10,
+		"siren_ipc":"channel",
+		"siren_channel_rmem":4194304,
+		"siren_channel_wmem":6291456,
+		"siren_input_err_retry_num":5,
+		"siren_input_err_retry_timeout":100
+	},
+	"alg_config": {
+		"alg_use_legacy_config_file":true,
+		"alg_legacy_config_file_path":"/system/workdir_cn",
+		"alg_lan":"zh",
+		"alg_rs_mics":[0,1,2,3,4,5,6,7],
+		"alg_aec":true
+		"alg_aec_mics":[0,1,2,3,4,5],
+		"alg_aec_ref_mics":[6,7],
+		"alg_aec_shield":200.0,
+		"alg_aec_aff_cpus":[3],
+		"alg_aec_mat_aff_cpus":[2,3],
+		"alg_raw_stream_sl_direction":180.0,
+		"alg_raw_stream_bf":true,
+		"alg_raw_stream_agc":true,
+		"alg_vt_enable":true,
+		"alg_vad_enable":true,
+		"alg_vad_mics":[3],
+		"alg_mic_pos":[[0.03750000, 0.00000001, 0.00000000],
+					   [-0.03750000, 0.00000000, 0.00000000],
+					   [0.01875000, 0.03247596, 0.00000000],
+					   [-0.01875000, -0.03247595, 0.00000000],
+					   [0.01875000, -0.03247596, 0.00000000],
+					   [-0.01875000, 0.03247595, 0.00000000],
+					   [0.0, 0.0, 0.0],
+					   [0.0, 0.0, 0.0]],
+		"alg_sl_mics":[0,1,2,3,4,5],
+		"alg_bf_mics":[0,1,2,3,4,5],
+		"alg_opus_compress":false,
+		"alg_vt_phomod":"/system/workdir_cn/cn.tri3a.hmms.fix",
+		"alg_vt_dnnmod":"/system/workdir_cn/final.svd.nnet.casia.160429",
+		"alg_rs_delay_on_right_channel":true,
+		"raw_stream_channel_num":1,
+		"raw_stream_sample_rate":16000,
+		"raw_stream_byte":2
+	}
+}

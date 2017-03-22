@@ -1,0 +1,19 @@
+[SYS00]
+HmmFile		= hmm
+GmmFile		= final.svd.nnet.casia.160429
+Network		= rn_rokid_cmd_emb_20160524_standard.dat
+
+LM_WEIGHT	= 13
+BEAM		= 165
+MAXMODEL	= 3000
+AM_LA_ALPHA	= 3
+MAXSCALEMODEL	= 8000
+useGS		= 0
+scale = 0.7
+shareAm = 0
+batch = 256
+OUTWEIGHT = 0.5
+writelattice = 	0
+HotArcBonus = 1
+PPSCALE	= 12
+HotCmdThd = 0

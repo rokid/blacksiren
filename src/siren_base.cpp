@@ -367,8 +367,8 @@ void SirenBase::loopRecording() {
         return;
     }
 
-    //std::ofstream testRecordingDebugStream;
-    //testRecordingDebugStream.open("/data/debug1.pcm", std::ios::out | std::ios::binary);
+    std::ofstream testRecordingDebugStream;
+    testRecordingDebugStream.open("/data/debug1.pcm", std::ios::out | std::ios::binary);
 
     Message msg(SIREN_RESPONSE_MSG_ON_INIT_OK);
     resultWriter.writeMessage(&msg);
@@ -409,7 +409,7 @@ void SirenBase::loopRecording() {
             //siren_printf(SIREN_ERROR, "preprocess failed");
             continue;
         }
-        //testRecordingDebugStream.write((char *)pPreVoicePackage->data, pPreVoicePackage->size);
+        testRecordingDebugStream.write((char *)pPreVoicePackage->data, pPreVoicePackage->size);
 
         status = processQueue.push((void *)pPreVoicePackage);
         if (status != 0) {

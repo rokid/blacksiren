@@ -21,11 +21,9 @@
 
 ### Siren内存参数
 
-```siren_share_mem_file_path```: 用于跨进程共享音频数据的临时文件绝对地址。
-```siren_raw_voice_block_size```: RawVoicePool内存块大小，单位为字节，默认为2。   
-```siren_raw_voice_block_num```: RawVoicePool内存块数目，默认为524288。   
-```siren_processed_voice_block_size```: ProcessedVoicePool内存块大小，单位为字节，默认为65536。   
-```siren_processed_voice_block_num```: ProcessedVoicePool内存块数目，默认为256。   
+```siren_ipc```: 使用channel的方式进行ipc还是share memory，目前仅支持channel   
+```siren_channel_rmem```: channel写缓存的大小  
+```siren_channel_wmem```: channel读缓存的大小  
 
 ### Siren行为
 
@@ -33,8 +31,8 @@
 ```siren_input_err_retry_timeout```: 两次重试间间隔的时间，单位时毫秒，默认为100
 
 ### 算法参数
-```alg_use_legacy_ssp_config_file```: 是否使用老siren的ssp配置文件方式   
-```alg_ssp_config_file_path```: 使用老siren的配置文件方式，指出ssp配置文件位置   
+```alg_use_legacy_config_file```: 是否使用老siren的ssp配置文件方式   
+```alg_legacy_config_file_path```: 使用老siren的配置文件方式，指出ssp配置文件位置   
 ```alg_lan```: 当前语言配置，zh/en，默认zh   
 ```alg_rs_mics```: 降采样通道配置，数组形式，告知需要降采样的通道   
 
@@ -53,18 +51,15 @@
 
 
 ```alg_vad_mics```: vad使用的音频通道，数组形式    
-```alg_mic_pos```: 所有麦克风的位置，每个位置由x,y,z三个double坐标描述。   
-```alg_sl_mics```: 寻向使用的音频通道。
+```alg_mic_pos```: 所有麦克风的位置，每个位置由x,y,z三个double坐标描述。     
+```alg_sl_mics```: 寻向使用的音频通道。   
 ```alg_bf_mics```: 波束成形使用的音频通道。   
-```alg_opus_compress```:   是否输出opus编码后的语音
+```alg_opus_compress```:   是否输出opus编码后的语音   
 
-```alg_use_legacy_vt_config_file```: 是否使用老的siren 激活配置文件   
-```alg_vt_config_file_path```: 使用老siren的配置文件方式，指出激活配置文件位置   
-```alg_vt_phomod```:   音子对应表
+```alg_vt_phomod```:   音子对应表   
 ```alg_vt_dnnmod```:   DNN模型
 
-```alg_rs_delay_on_right_channel```: 右声道是否存在不一致的delay
-```alg_rs_delay_on_left_channel```: 左声道是否存在不一致的delay
+```alg_rs_delay_on_left_right_channel```: 左右声道是否存在不一致的delay，常发生在i2s采集的情况上
 
 ### 裸音频流参数
 ```raw_stream_channel_num```: 裸音频流输出的通道数，默认为1。   
@@ -91,11 +86,13 @@
 
 ##### 原型
 
-``` int (*init_input_stream)() ```
+``` int (*init_input_stream)(void *token) ```
 
 ##### 参数
 
-无
+| 参数 | 类型 | 说明 |
+| ------| ------ | ------ |
+| token | void * | 通过init_siren传入的token |
 
 ##### 返回值
 
@@ -109,11 +106,13 @@
 
 ##### 原型
 
-``` void (*release_input_stream)() ```
+``` void (*release_input_stream)(void *token) ```
 
 ##### 参数
 
-无
+| 参数 | 类型 | 说明 |
+| ------| ------ | ------ |
+| token | void * | 通过init_siren传入的token |
 
 ##### 返回值
 
@@ -127,11 +126,13 @@
 
 ##### 原型
 
-``` void (*start_input_stream)() ```
+``` void (*start_input_stream)(void *token) ```
 
 ##### 参数
 
-无
+| 参数 | 类型 | 说明 |
+| ------| ------ | ------ |
+| token | void * | 通过init_siren传入的token |
 
 ##### 返回值
 
@@ -145,11 +146,13 @@
 
 ##### 原型
 
-``` void (*stop_input_stream)() ```
+``` void (*stop_input_stream)(void *token) ```
 
 ##### 参数
 
-无
+| 参数 | 类型 | 说明 |
+| ------| ------ | ------ |
+| token | void * | 通过init_siren传入的token |
 
 ##### 返回值
 
@@ -163,12 +166,13 @@
 
 ##### 原型
 
-``` int (*read_input_stream)(char *buffer, int length) ```
+``` int (*read_input_stream)(void *token, char *buffer, int length) ```
 
 ##### 参数
 
 | 参数 | 类型 | 说明 |
 | ------| ------ | ------ |
+| token | void * | 通过init_siren传入的token |
 | buffer | char * | 需要填写音频流数据的缓冲区，不要超过length的长度 |
 | length | int | 音频缓冲区的长度 |
 
@@ -185,11 +189,13 @@ stop_input_stream最后重新尝试调用start_input_stream重新开始读取音
 
 ##### 原型
 
-``` void (*on_err_input_stream)() ```
+``` void (*on_err_input_stream)(void *token) ```
 
 ##### 参数
 
-无
+| 参数 | 类型 | 说明 |
+| ------| ------ | ------ |
+| token | void * | 通过init_siren传入的token |
 
 ##### 返回值
 
@@ -209,19 +215,21 @@ stop_input_stream最后重新尝试调用start_input_stream重新开始读取音
 
 ##### 原型
 
-``` void (on_voice_event*)(int length, siren_event_t event, int block, void *token, int has_sl, int hasVoice, double sl_degree, int has_voice_print)```
+``` void (on_voice_event*)(void *token, int length, siren_event_t event, char *buff, int has_sl, int hasVoice, double sl_degree, double energy, double threshold, int has_voice_print)```
 
 ##### 参数
 
 | 参数 | 类型 | 说明 |
 | ------| ------ | ------ |
+| token | void * | 通过init_siren传入的token |
 | length | int | 如果包含语音数据帧，表示音频帧大小 |
 | event | siren_event_t | 语音事件，具体事件请见下面说明 |
-| block | int | 这个语音帧的包含多少个block，如果无语音帧则为0 |
-| token | void * | 索引内存区域的token，如果无语音帧则为NULL |
-| has_sl | int | 是否包含寻向信息 |
-| has_voice | int | 是否包含语音信息 |
-| sl_degree | double | 水平寻向角度，无寻向信息则为0.0 |
+| buff | char * | 纯净语音结果，长度由length决定 |
+| has_sl | int | 是否包含寻向信息，表示是否包含寻向信息，1表示包含 |
+| has_voice | int | 是否包含语音信息，1表示是语音帧 |
+| sl_degree| double | 水平寻向角度，无寻向信息则为0.0 | 
+| energy | double | 语音帧能量大小，仅在has_voice为1的时候有意义 |
+| threshold | double | 语音能量阈值 |
 | has_voice_print| int | 是否是声纹帧 |
 
 ##### 返回值
@@ -257,22 +265,19 @@ stop_input_stream最后重新尝试调用start_input_stream重新开始读取音
 
 #### 函数原型
 
-``` siren_status_t init_siren(const char *path, siren_input_if_t *input)```  
+``` siren_t init_siren(void *token, const char *path, siren_input_if_t *input)```  
 
 #### 参数
 
 | 参数 | 类型 | 说明 |
 | ------| ------ | ------ |
+| token | void * | 将在后续回调方法中被调用 |                                   
 | path | const char * | JSON配置文件所在的本地文件绝对地址 |
 | input | siren_input_if_t * | siren语音输入接口 |
 
 #### 返回值
 
-可能的返回值为:   
-1. ```SIREN_STATUS_OK```: 初始化成功  
-2. ```SIREN_STATUS_CONFIG_ERROR```: 解析配置文件出错  
-3. ```SIREN_STATUS_CONFIG_NO_FOUND```: 配置文件不存在  
-4. ```SIREN_STATUS_ERROR```: 初始化失败
+返回siren对象，如果失败则返回nullptr，siren对象用于后续操作的第一个参数
 
 
 ### 2. 打开语音处理音频流
@@ -283,12 +288,13 @@ stop_input_stream最后重新尝试调用start_input_stream重新开始读取音
 
 #### 函数原型
 
-``` void start_siren_process_stream(siren_proc_callback_t *proc_callback) ```
+``` void start_siren_process_stream(siren_t siren, siren_proc_callback_t *proc_callback) ```
 
 #### 参数
 
 | 参数 | 类型 | 说明 |
 | ------| ------ | ------ |
+| siren | siren_t | siren对象|
 | proc_callback | siren_proc_callback_t * | 处理结果回调接口 |
 
 #### 返回值
@@ -303,11 +309,13 @@ stop_input_stream最后重新尝试调用start_input_stream重新开始读取音
 
 #### 函数原型
 
-``` void start_siren_raw_stream() ```
+``` void start_siren_raw_stream(siren_t siren) ```
 
 #### 参数
 
-无
+| 参数 | 类型 | 说明 |
+| ------| ------ | ------ |
+| siren | siren_t | siren对象|
 
 #### 返回值
 
@@ -321,11 +329,13 @@ stop_input_stream最后重新尝试调用start_input_stream重新开始读取音
 
 #### 函数原型
 
-``` void stop_siren_process_stream() ```
+``` void stop_siren_process_stream(siren_t siren) ```
 
 #### 参数
 
-无
+| 参数 | 类型 | 说明 |
+| ------| ------ | ------ |
+| siren | siren_t | siren对象|
 
 #### 返回值
 
@@ -339,11 +349,13 @@ stop_input_stream最后重新尝试调用start_input_stream重新开始读取音
 
 #### 函数原型
 
-``` void stop_siren_raw_stream() ```
+``` void stop_siren_raw_stream(siren_t siren) ```
 
 #### 参数
 
-无
+| 参数 | 类型 | 说明 |
+| ------| ------ | ------ |
+| siren | siren_t | siren对象|
 
 #### 返回值
 
@@ -357,38 +369,19 @@ stop_input_stream最后重新尝试调用start_input_stream重新开始读取音
 
 #### 函数原型
 
-``` void stop_siren_stream() ```
-
-#### 参数
-
-无
-
-#### 返回值
-
-无
-
-### 7. 读取ProcessedVoicePool中的语音数据
-
-#### 函数功能
-
-> 通过token读取ProcessedVoicePool中缓存的已处理的语音数据，该方法不会阻塞
-
-#### 函数原型
-
-``` siren_voice_pkg_t* read_siren_voice(void *token, int block_nums) ```
+``` void stop_siren_stream(siren_t siren) ```
 
 #### 参数
 
 | 参数 | 类型 | 说明 |
 | ------| ------ | ------ |
-| token | void * | siren_proc_callback_t的siren_proc_event中给定的token |
-| length | int | 语音包长度，以字节为单位 |
+| siren | siren_t | siren对象|
 
 #### 返回值
 
-siren_voice_pkg_t，如果token不合法或length不正确，将返回NULL
+无
 
-### 8. 强制设置当前siren的激活/睡眠状态
+### 7. 强制设置当前siren的激活/睡眠状态
 
 #### 函数功能
 
@@ -396,12 +389,13 @@ siren_voice_pkg_t，如果token不合法或length不正确，将返回NULL
 
 #### 函数原型
 
-``` void set_siren_state(siren_state_t state, state_changed_callback_t *callback)```
+``` void set_siren_state(siren_t siren, siren_state_t state, state_changed_callback_t *callback)```
 
 #### 参数
 
 | 参数 | 类型 | 说明 |
 | ------| ------ | ------ |
+| siren | siren_t | siren对象|
 | state | siren_state_t | 可以在siren_state_awake和siren_state_sleep中选择 |
 | callback | state_changed_callback_t * | 如果不是NULL则调用为异步，否则为同步，异步调用会在完成时调用callback接口 |
 
@@ -409,7 +403,7 @@ siren_voice_pkg_t，如果token不合法或length不正确，将返回NULL
 
 无
 
-### 9. 强制设置当前寻向角度
+### 8. 强制设置当前寻向角度
 
 #### 函数功能
 
@@ -417,12 +411,13 @@ siren_voice_pkg_t，如果token不合法或length不正确，将返回NULL
 
 #### 函数原型
 
-``` void set_siren_steer(float ho, float ver)```
+``` void set_siren_steer(siren_t siren, float ho, float ver)```
 
 #### 参数
 
 | 参数 | 类型 | 说明 |
 | ------| ------ | ------ |
+| siren | siren_t | siren对象|
 | ho | float | 水平角度 |
 | ver | float | 垂直角度 |
 
@@ -430,42 +425,26 @@ siren_voice_pkg_t，如果token不合法或length不正确，将返回NULL
 
 无
 
-### 10. 关闭siren软件栈
+### 9. 关闭siren软件栈
 
 #### 函数功能
 > 关闭siren软件栈，回收所有内存
 
 #### 函数原型
 
-``` void destroy_siren()```
+``` void destroy_siren(siren_t siren)```
 
 #### 参数
 
-无
+| 参数 | 类型 | 说明 |
+| ------| ------ | ------ |
+| siren | siren_t | siren对象|
 
 #### 返回值
 
 无
 
-
-### 11. 跨进程连接siren内存池
-
-#### 函数功能
-> 很多时候用户希望在其他进程调用read_siren_voice函数来读取siren的内存池，该方法允许用户再其他进程连接到siren的内存池，然后通过token读取语音信息
-
-#### 函数原型
-
-``` siren_status_t attach_to_siren()```
-
-#### 参数
-
-无
-
-#### 返回值
-
-无
-
-### 12. 添加唤醒激活词
+### 10. 添加唤醒激活词
 
 #### 函数功能
 > 添加一个激活词
