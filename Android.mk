@@ -19,6 +19,20 @@ ifdef CONFIG_DEBUG_CHANNEL
 L_CFLAGS += -DCONFIG_DEBUG_CHANNEL
 endif
 
+ifdef CONFIG_RECORDING_PATH
+L_CFLAGS += -DCONFIG_RECORDING_PATH=\"$(CONFIG_RECORDING_PATH)\"
+endif
+
+ifdef CONFIG_RECORDING_MIC_ARRAY
+L_CFLAGS += -DCONFIG_RECORDING_MIC_ARRAY 
+endif
+
+ifdef CONFIG_RECORDING_PROCESSED_DATA
+L_CFLAGS += -DCONFIG_RECORDING_PROCESSED_DATA
+endif
+
+$(info $(L_CFLAGS))
+
 include $(CLEAR_VARS)
 LOCAL_PREBUILT_LIBS := \
 		libr2ssp:thirdparty/support/$(TARGET_ARCH)/libs/libr2ssp.so \
@@ -68,12 +82,12 @@ LOCAL_SRC_FILES := \
 
 LOCAL_C_INCLUDES += \
 		$(LOCAL_PATH)/include \
-		robot/easyr2/include \
-		robot/hardware/include
+		$(LOCAL_PATH)/../rokid-openvoice-sample-android/hardware/include
 
 LOCAL_MODULE := test
-LOCAL_SHARED_LIBRARIES := libbsiren libeasyr2 libhardware
+LOCAL_SHARED_LIBRARIES := libbsiren libhardware
 
 include $(BUILD_EXECUTABLE)
 
 include $(wildcard $(LOCAL_PATH)/thirdparty/libjsonc/Android.mk)
+#include $(LOLCAL_PATH)/java.mk

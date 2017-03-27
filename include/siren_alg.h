@@ -75,7 +75,7 @@ public:
     bool hasSlInfo(int prop);
     bool hasVoice(int prop);
 
-    void setSysState(int state);
+    void setSysState(int state, bool shouldCallback);
     void setSysSteer(float ho, float ver);
 
     siren_status_t init();

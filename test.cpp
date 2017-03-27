@@ -15,8 +15,7 @@
 #include "lfqueue.h"
 #include "siren_channel.h"
 
-#include "easyr2_queue.h"
-#include "r2hw/mic_array.h"
+#include "mic/mic_array.h"
 
 void test_fork_socketpair() {
     int sockets[2], child;
@@ -152,8 +151,8 @@ void ChannelTest::thread_handler() {
     char *data = nullptr;
     for (;;) {
         if (next <= 0) {
-            std::cout<<"end!!!"<<std::endl;
-            break; 
+            std::cout << "end!!!" << std::endl;
+            break;
             //break;
         }
         if (reader.pollMessage(&msg) != BlackSiren::SIREN_CHANNEL_OK) {
@@ -162,7 +161,7 @@ void ChannelTest::thread_handler() {
             //std::this_thread::sleep_for(std::chrono::seconds(10));
             continue;
             //break;
-            
+
         } else {
             std::cout << "read message !!!" << std::endl;
             assert(msg != nullptr);
@@ -170,8 +169,8 @@ void ChannelTest::thread_handler() {
             std::cout << "read type " << msg->msg << " read len " << msg->len << std::endl;
             if (msg->len != 0) {
                 //std::cout << "read data " << msg->data << std::endl;
-    //            consumer_dump.write(msg->data, msg->len);
-    //            consumer_dump << std::endl;
+                //            consumer_dump.write(msg->data, msg->len);
+                //            consumer_dump << std::endl;
             }
             delete (char *)msg;
         }
@@ -398,6 +397,7 @@ int init_xmos_input_stream(void *token) {
         return -1;
     }
 
+    //recordingDebugStream.open("/data/test.pcm", std::ios::out | std::ios::binary);
     return 0;
 }
 
@@ -407,6 +407,7 @@ void release_xmos_input_stream(void *token) {
 void start_xmos_input_stream(void *token) {
     siren_printf(BlackSiren::SIREN_INFO, "start input stream");
     mic_array_device->start_stream(mic_array_device);
+    siren_printf(BlackSiren::SIREN_INFO, "end of start input stream");
 }
 
 void stop_xmos_input_stream(void *token) {
@@ -422,7 +423,9 @@ int read_xmos_input_stream(void *token,  char *buff, int len) {
     //buff[len/2 + 1] = 'b';
     //buff[len/2 + 2] = 'c';
     //buff[len/2 + 3] = 'd';
-    mic_array_device->read_stream(mic_array_device, buff, (unsigned long long *)&size);
+    //siren_printf(BlackSiren::SIREN_INFO, "before read stream");
+    mic_array_device->read_stream(mic_array_device, buff, size);
+    //recordingDebugStream.write(buff, len);
     //buff[len/2 + 4] = '\0';
     //std::cout<<buff + len/2<<std::endl;
     return 0;
@@ -443,7 +446,7 @@ void test_xmos() {
     siren_input_if_t input_callback;
     siren_proc_callback_t proc_callback;
     siren_state_changed_callback_t state_changed_callback;
-    
+
     state_changed_callback.state_changed_callback = on_siren_state_changed_fn;
     input_callback.init_input = init_xmos_input_stream;
     input_callback.release_input = release_xmos_input_stream;
@@ -461,23 +464,52 @@ void test_xmos() {
     siren_printf(BlackSiren::SIREN_INFO, "start recording test");
     start_siren_process_stream(siren, &proc_callback);
 
-    std::thread t([&]{
-        std::this_thread::sleep_for(std::chrono::seconds(10));        
+#if 0
+    std::thread t([&] {
+        std::this_thread::sleep_for(std::chrono::seconds(10));
         siren_printf(BlackSiren::SIREN_INFO, "test set state awake sync");
-        set_siren_state(siren, SIREN_STATE_AWAKE, nullptr);     
+        set_siren_state(siren, SIREN_STATE_AWAKE, nullptr);
         siren_printf(BlackSiren::SIREN_INFO, "now state is in wake");
         std::this_thread::sleep_for(std::chrono::seconds(10));
         siren_printf(BlackSiren::SIREN_INFO, "test set state sleep async");
-        set_siren_state(siren, SIREN_STATE_SLEEP, &state_changed_callback);  
-        std::this_thread::sleep_for(std::chrono::seconds(100));    
+        set_siren_state(siren, SIREN_STATE_SLEEP, &state_changed_callback);
+        std::this_thread::sleep_for(std::chrono::seconds(100));
     });
 
     t.join();
-
+#endif
     for (;;) {
         std::this_thread::sleep_for(std::chrono::seconds(10));
     }
 
+}
+
+void test_mic() {
+    if (hw_get_module (MIC_ARRAY_HARDWARE_MODULE_ID, (const struct hw_module_t **)&module) == 0) {
+        siren_printf (BlackSiren::SIREN_INFO, "find mic_array");
+        //open mic array
+        if (0 != mic_array_device_open(&module->common, &mic_array_device)) {
+            siren_printf(BlackSiren::SIREN_ERROR, "open mic array failed");
+            return;
+        } else {
+            mic_open = true;
+        }
+    } else {
+        return;
+    }
+
+    recordingDebugStream.open("/data/test.pcm", std::ios::out | std::ios::binary);
+    if (0 != mic_array_device->start_stream(mic_array_device)) {
+        std::cout<<"mic_array start stream failed"<<std::endl;
+    }
+    int frameSize = 8 * 4 * 480;//mic_array_device->get_stream_buff_size(mic_array_device);
+    siren_printf(BlackSiren::SIREN_INFO, "use frame cnt %d", frameSize);
+    char *buff = new char[frameSize];
+    for (;;){
+        int size = 0;
+        mic_array_device->read_stream(mic_array_device, buff, frameSize);
+        recordingDebugStream.write(buff, frameSize);     
+    }
 }
 
 int main(void) {
@@ -490,4 +522,5 @@ int main(void) {
     //test_init();
     //test_recording();
     test_xmos();
+    //test_mic();
 }

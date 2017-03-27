@@ -22,6 +22,12 @@ __BEGIN_DECLS
 #endif
 
 
+#ifdef CONFIG_RECORDING_PATH
+#define CONFIG_STORE_PATH CONFIG_RECORDING_PATH 
+#else
+#define CONFIG_STORE_PATH ""
+#endif
+
 __END_DECLS
 
 

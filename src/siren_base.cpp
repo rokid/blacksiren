@@ -267,9 +267,25 @@ void SirenBase::processThreadHandler() {
 
     processThreadInit = true;
     initCond.notify_one();
-
-    //std::ofstream testRecordingDebugStream;
-    //testRecordingDebugStream.open("/data/debug2.pcm", std::ios::out | std::ios::binary);
+#ifdef CONFIG_RECORDING_PATH
+    std::string path(CONFIG_STORE_PATH);
+#endif
+#ifdef CONFIG_RECORDING_MIC_ARRAY
+    std::string recordingFileMicArray("/mic_array.pcm");
+    recordingFileMicArray = path + recordingFileMicArray;
+    siren_printf(SIREN_INFO, "recording mic array message to %s", recordingFileMicArray.c_str());
+    std::ofstream testRecordingDebugStream;
+    testRecordingDebugStream.open(recordingFileMicArray.c_str(), std::ios::out | std::ios::binary);
+#endif
+#ifdef CONFIG_RECORDING_PROCESSED_DATA
+    std::string recordingFileResult("/result.pcm");
+    recordingFileResult = path + recordingFileResult;
+    siren_printf(SIREN_INFO, "recording result message to %s", recordingFileResult.c_str());
+    std::ofstream testRecordingDebugStreamResult;
+    testRecordingDebugStreamResult.open(recordingFileResult.c_str(), std::ios::out | std::ios::binary);
+#endif
+    
+    
     std::vector<ProcessedVoiceResult*> voiceResult;
     while (1) {
         PreprocessVoicePackage *pVoicePackage = nullptr;
@@ -290,7 +306,9 @@ void SirenBase::processThreadHandler() {
         //testRecordingDebugStream.write((char *)pVoicePackage->data, pVoicePackage->size);
         //handle voice process
         if (pVoicePackage->msg == SIREN_REQUEST_MSG_DATA_PROCESS) {
-            //testRecordingDebugStream.write((char *)pVoicePackage->data, pVoicePackage->size);
+#ifdef CONFIG_RECORDING_MIC_ARRAY
+            testRecordingDebugStream.write((char *)pVoicePackage->data, pVoicePackage->size);
+#endif
             //siren_printf(SIREN_INFO, "start one frame process");
             audioProcessor.process(pVoicePackage, voiceResult);
             if (voiceResult.empty()) {
@@ -303,7 +321,16 @@ void SirenBase::processThreadHandler() {
                 ProcessedVoiceResult *p = voiceResult[i];
                 //siren_printf(SIREN_INFO, "send prop %d len %d hasV %d hasS %d sl %f",
                 //        p->prop, p->size, p->hasVoice, p->hasSL, p->sl);
+                if (p->prop == SIREN_EVENT_SLEEP) {
+                    siren_printf(SIREN_INFO, "set state SLEEP without callback");
+                    audioProcessor.setSysState(SIREN_STATE_SLEEP, false);
+                }
                 Message *msg = allocateMessage(SIREN_RESPONSE_MSG_ON_VOICE_EVENT, sizeof(ProcessedVoiceResult) + p->size);
+#ifdef CONFIG_RECORDING_PROCESSED_DATA
+                if (p->hasVoice) {
+                    testRecordingDebugStreamResult.write((char *)p->data, p->size);
+                }
+#endif
                 memcpy(msg->data, (char *)p, sizeof(ProcessedVoiceResult) + p->size);
                 resultWriter.writeMessage(msg);
                 delete (char *)p;
@@ -319,7 +346,7 @@ void SirenBase::processThreadHandler() {
             int *t = (int *)pVoicePackage->data;
             int state = t[0];
             siren_printf(SIREN_INFO, "man set state to %d", state);
-            audioProcessor.setSysState(state);
+            audioProcessor.setSysState(state, true);
         }
         break;
         case SIREN_REQUEST_MSG_SET_STEER: {
@@ -367,8 +394,8 @@ void SirenBase::loopRecording() {
         return;
     }
 
-    std::ofstream testRecordingDebugStream;
-    testRecordingDebugStream.open("/data/debug1.pcm", std::ios::out | std::ios::binary);
+    //std::ofstream testRecordingDebugStream;
+    //testRecordingDebugStream.open("/data/debug1.pcm", std::ios::out | std::ios::binary);
 
     Message msg(SIREN_RESPONSE_MSG_ON_INIT_OK);
     resultWriter.writeMessage(&msg);
@@ -409,7 +436,7 @@ void SirenBase::loopRecording() {
             //siren_printf(SIREN_ERROR, "preprocess failed");
             continue;
         }
-        testRecordingDebugStream.write((char *)pPreVoicePackage->data, pPreVoicePackage->size);
+        //testRecordingDebugStream.write((char *)pPreVoicePackage->data, pPreVoicePackage->size);
 
         status = processQueue.push((void *)pPreVoicePackage);
         if (status != 0) {

@@ -48,7 +48,7 @@ PreprocessVoicePackage* allocatePreprocessVoicePackage(int msg, int aec, int siz
     return vp;
 }
 
-ProcessedVoiceResult* allocateProcessedVoiceResult(int size, int debug, int prop, 
+ProcessedVoiceResult* allocateProcessedVoiceResult(int size, int debug, int prop,
         int hasSL, int hasV, double sl, double energy, double threshold) {
     ProcessedVoiceResult *pvr = nullptr;
     char *temp = nullptr;
@@ -191,9 +191,11 @@ bool SirenAudioVBVProcessor::hasVoice(int prop) {
     }
 }
 
-void SirenAudioVBVProcessor::setSysState(int state) {
+void SirenAudioVBVProcessor::setSysState(int state, bool shouldCallback) {
     r2v_state = (r2v_sys_state)state;
-    stateCallback((int)r2v_state);
+    if (shouldCallback) {
+        stateCallback((int)r2v_state);
+    }
 }
 
 void SirenAudioVBVProcessor::setSysSteer(float ho, float ver) {
@@ -202,7 +204,7 @@ void SirenAudioVBVProcessor::setSysSteer(float ho, float ver) {
 
 // legacy vbv process just for testing
 int SirenAudioVBVProcessor::process(PreprocessVoicePackage *voicePackage,
-        std::vector<ProcessedVoiceResult *> &result) {
+                                    std::vector<ProcessedVoiceResult *> &result) {
     if (voicePackage == nullptr) {
         return 0;
     }
@@ -212,7 +214,7 @@ int SirenAudioVBVProcessor::process(PreprocessVoicePackage *voicePackage,
         siren_printf(SIREN_ERROR, "result vector is not empty before process!");
         return 0;
     }
-    
+
     if (voicePackage->data == nullptr || voicePackage->size == 0) {
         siren_printf(SIREN_ERROR, "pre voice package's data is null or len is 0");
         return 0;
@@ -235,7 +237,7 @@ int SirenAudioVBVProcessor::process(PreprocessVoicePackage *voicePackage,
     if (block_num == 0) {
         return 0;
     }
-    
+
     for (int i = 0; i < block_num; i++) {
         if (ppR2ad_msg_block[i]->iMsgId == r2ad_awake_nocmd) {
             r2v_state = r2ssp_state_awake;
