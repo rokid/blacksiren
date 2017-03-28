@@ -31,6 +31,7 @@ ifdef CONFIG_RECORDING_PROCESSED_DATA
 L_CFLAGS += -DCONFIG_RECORDING_PROCESSED_DATA
 endif
 
+
 $(shell mkdir -p $(TARGET_OUT_ETC))
 $(shell mkdir -p $(TARGET_OUT))
 
@@ -38,7 +39,7 @@ $(shell cp $(LOCAL_PATH)/resource/blacksiren.json $(TARGET_OUT_ETC))
 $(shell cp -r $(LOCAL_PATH)/resource/en $(TARGET_OUT)/workdir_en)
 $(shell cp -r $(LOCAL_PATH)/resource/cn $(TARGET_OUT)/workdir_cn)
 
-$(info $(L_CFLAGS))
+$(info $(TARGET_DEVICE))
 
 include $(CLEAR_VARS)
 LOCAL_PREBUILT_LIBS := \

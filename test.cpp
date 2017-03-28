@@ -521,6 +521,6 @@ int main(void) {
 
     //test_init();
     //test_recording();
-    test_xmos();
-    //test_mic();
+    //test_xmos();
+    test_mic();
 }
