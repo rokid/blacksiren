@@ -339,7 +339,7 @@ void test_init() {
     input_callback.on_err_input = on_err_input_stream;
     input_callback.read_input = read_input_stream;
 
-    siren = init_siren(nullptr, "/data/test.json", &input_callback);
+    siren = init_siren(nullptr, "/data/blacksiren.json", &input_callback);
     if (siren == 0) {
         siren_printf(BlackSiren::SIREN_INFO, "init siren failed");
         return;
@@ -519,8 +519,8 @@ int main(void) {
     //test_thread_hardware_concurrency();
     //test_fork_socketpair();
 
-    //test_init();
+    test_init();
     //test_recording();
     //test_xmos();
-    test_mic();
+    //test_mic();
 }

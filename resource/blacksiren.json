@@ -3,7 +3,7 @@
 		"mic_channel_num":8,
 		"mic_sample_rate":48000,
 		"mic_audio_byte":4,
-		"mic_frame_length"10,
+		"mic_frame_length":10,
 		"siren_ipc":"channel",
 		"siren_channel_rmem":4194304,
 		"siren_channel_wmem":6291456,
@@ -15,7 +15,7 @@
 		"alg_legacy_config_file_path":"/system/workdir_cn",
 		"alg_lan":"zh",
 		"alg_rs_mics":[0,1,2,3,4,5,6,7],
-		"alg_aec":true
+		"alg_aec":true,
 		"alg_aec_mics":[0,1,2,3,4,5],
 		"alg_aec_ref_mics":[6,7],
 		"alg_aec_shield":200.0,

@@ -90,7 +90,7 @@ LOCAL_SRC_FILES := \
 
 LOCAL_C_INCLUDES += \
 		$(LOCAL_PATH)/include \
-		$(LOCAL_PATH)/../rokid-openvoice-sample-android/hardware/include
+		open-platform/client/sample/hardware/include
 
 LOCAL_MODULE := test
 LOCAL_SHARED_LIBRARIES := libbsiren libhardware

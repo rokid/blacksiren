@@ -9,12 +9,19 @@
 namespace BlackSiren {
 
 struct MicPos {
-    float x;
-    float y;
-    float z;
+    std::vector<double> pos;
 };
 
 //JSON KEY
+
+#define IPC_CHANNEL "channel"
+#define IPC_DBUS "dbus"
+#define IPC_BINDER "binder"
+#define IPC_SHARE_MEM "share_mem"
+
+#define KEY_BASIC_CONFIG "basic_config"
+#define KEY_ALG_CONFIG "alg_config"
+
 #define KEY_MIC_CHANNEL_NUM "mic_channel_num"
 #define KEY_MIC_SAMPLE_RATE "mic_sample_rate"
 #define KEY_MIC_AUDIO_BYTE "mic_audio_byte"
@@ -142,7 +149,9 @@ public:
     SirenConfig& getConfigFile() {
         return siren_config;
     }
-    
+
+    config_error_t loadConfigFromJSON(std::string &);
+
 private:
     bool validPath;
     std::string config_file_path;
