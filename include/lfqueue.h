@@ -51,7 +51,7 @@ struct LFItem {
 
 
 struct LFQueue {
-    LFQueue(uint32_t len, void *buf) :
+    LFQueue(uint32_t len, void *buf=nullptr) :
         push_(0), pop_(0), item_(nullptr), allocated_(nullptr),
         queued_item_(0) {
         SIREN_ASSERT(len != 0);

@@ -57,18 +57,6 @@ include $(CLEAR_VARS)
 
 SRC := $(call all-named-files-under,*.cpp,src)
 
-ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
-LOCAL_ARM_NEON := true
-EXTRA_CFLAGS += "-march=armv7-a -mfloat-abi-softfp -mfpu=neon"
-EXTRA_LDFLAGS += "-Wl,--fix-cortex-a8"
-THIRD_INCLUDES += $(LOCAL_PATH)/thirdparty/support/armeabi-v7a/include
-endif
-
-ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
-EXTRA_LDFLAGS="-Wl"
-THIRD_INCLUDES += $(LOCAL_PATH)/thirdparty/support/arm64-v8a/include
-endif
-
 LOCAL_SRC_FILES:= \
 	$(SRC) 
 
@@ -96,6 +84,6 @@ LOCAL_MODULE := test
 LOCAL_SHARED_LIBRARIES := libbsiren libhardware
 
 include $(BUILD_EXECUTABLE)
-
+include $(wildcard $(LOCAL_PATH)/java/jni/Android.mk)
 include $(wildcard $(LOCAL_PATH)/thirdparty/libjsonc/Android.mk)
 #include $(LOLCAL_PATH)/java.mk

@@ -46,10 +46,10 @@ typedef struct {
     on_raw_voice_t raw_voice_callback;
 } siren_raw_stream_callback_t;
 
-typedef void (*on_siren_state_changed)(void *token, int current);
+typedef void (*on_siren_state_changed_t)(void *token, int current);
 
 typedef struct {
-    on_siren_state_changed state_changed_callback;
+    on_siren_state_changed_t state_changed_callback;
 } siren_state_changed_callback_t;
 
 enum {

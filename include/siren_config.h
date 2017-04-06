@@ -9,7 +9,7 @@
 namespace BlackSiren {
 
 struct MicPos {
-    std::vector<double> pos;
+    std::vector<long double> pos;
 };
 
 //JSON KEY

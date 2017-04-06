@@ -20,12 +20,12 @@
 namespace BlackSiren {
 
 template <typename T>
-std::string &&build_printable_indx(const std::vector<T> &from) {
+std::string build_printable_indx(const std::vector<T> &from) {
     std::string result;
-    for (int j : from) {
+    for (T j : from) {
         result.append(std::to_string(j)).append(" ");
     }
-    return std::move(result);
+    return result;
 }
 
 
@@ -212,6 +212,8 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
 
             json_object_put(alg_use_legacy_config_file_object);
         }
+    } else {
+        siren_printf(SIREN_WARNING, "cannot find key %s", KEY_ALG_USE_LEGACY_CONFIG_FILE);
     }
 
     if (TRUE == json_object_object_get_ex(alg_config, KEY_ALG_LEGACY_CONFIG_FILE_PATH, &alg_legacy_config_file_path_object)) {
@@ -221,6 +223,8 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
             siren_config.alg_config.alg_legacy_dir = legacy_file_path;
         }
         json_object_put(alg_legacy_config_file_path_object);
+    } else {
+        siren_printf(SIREN_WARNING, "cannot find key %s", KEY_ALG_LEGACY_CONFIG_FILE_PATH);
     }
 
     if (TRUE == json_object_object_get_ex(alg_config, KEY_ALG_LAN, &alg_lan_object)) {
@@ -237,6 +241,8 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
             }
         }
         json_object_put(alg_lan_object);
+    } else {
+        siren_printf(SIREN_WARNING, "cannot find key %s", KEY_ALG_LAN);
     }
 
     if (TRUE == json_object_object_get_ex(alg_config, KEY_ALG_RS_MICS, &alg_rs_mics_object)) {
@@ -257,6 +263,8 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         }
 
         json_object_put(alg_rs_mics_object);
+    } else {
+        siren_printf(SIREN_WARNING, "cannot find key %s", KEY_ALG_RS_MICS);
     }
 
     if (TRUE == json_object_object_get_ex(alg_config, KEY_ALG_AEC, &alg_aec_object)) {
@@ -266,6 +274,8 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         }
 
         json_object_put(alg_aec_object);
+    } else {
+        siren_printf(SIREN_WARNING, "cannot find key %s", KEY_ALG_AEC);
     }
 
     if (TRUE == json_object_object_get_ex(alg_config, KEY_ALG_AEC_MICS, &alg_aec_mics_object)) {
@@ -286,6 +296,8 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
                          build_printable_indx(siren_config.alg_config.alg_aec_mics).c_str());
         }
         json_object_put(alg_aec_mics_object);
+    } else {
+        siren_printf(SIREN_WARNING, "cannot find key %s", KEY_ALG_AEC_MICS);
     }
 
     if (TRUE == json_object_object_get_ex(alg_config, KEY_ALG_AEC_REF_MICS, &alg_aec_ref_mics_object)) {
@@ -306,6 +318,8 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
                          build_printable_indx(siren_config.alg_config.alg_aec_ref_mics).c_str());
         }
         json_object_put(alg_aec_mics_object);
+    } else {
+        siren_printf(SIREN_WARNING, "cannot find key %s", KEY_ALG_AEC_REF_MICS);
     }
 
     if (TRUE == json_object_object_get_ex(alg_config, KEY_ALG_AEC_SHIELD, &alg_aec_shield_object)) {
@@ -314,6 +328,8 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
             siren_printf(SIREN_INFO, "set aec shield to %f", siren_config.alg_config.alg_aec_shield);
         }
         json_object_put(alg_aec_shield_object);
+    } else {
+        siren_printf(SIREN_WARNING, "cannot find key %s", KEY_ALG_AEC_SHIELD);
     }
 
     if (TRUE == json_object_object_get_ex(alg_config, KEY_ALG_AEC_AFF_CPUS, &alg_aec_aff_cpus_object)) {
@@ -334,6 +350,8 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
                          build_printable_indx(siren_config.alg_config.alg_aec_aff_cpus).c_str());
         }
         json_object_put(alg_aec_aff_cpus_object);
+    } else {
+        siren_printf(SIREN_WARNING, "cannot find key %s", KEY_ALG_AEC_AFF_CPUS);
     }
 
     if (TRUE == json_object_object_get_ex(alg_config, KEY_ALG_AEC_MAT_AFF_CPUS, &alg_aec_mat_aff_cpus_object)) {
@@ -354,6 +372,8 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
                          build_printable_indx(siren_config.alg_config.alg_aec_mat_aff_cpus).c_str());
         }
         json_object_put(alg_aec_mat_aff_cpus_object);
+    } else {
+        siren_printf(SIREN_WARNING, "cannot find key %s", KEY_ALG_AEC_MAT_AFF_CPUS);
     }
 
 
@@ -363,6 +383,8 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
             siren_printf(SIREN_INFO, "set raw stream sl direction to %f", siren_config.alg_config.alg_raw_stream_sl_direction);
         }
         json_object_put(alg_raw_stream_sl_direction_object);
+    } else {
+        siren_printf(SIREN_WARNING, "cannot find key %s", KEY_ALG_RAW_STREAM_SL_DIRECTION);
     }
 
     if (TRUE == json_object_object_get_ex(alg_config, KEY_ALG_RAW_STREAM_BF, &alg_raw_stream_bf_object)) {
@@ -371,6 +393,8 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
             siren_printf(SIREN_INFO, "enable raw stream bf %d", siren_config.alg_config.alg_raw_stream_bf);
         }
         json_object_put(alg_raw_stream_bf_object);
+    } else {
+        siren_printf(SIREN_WARNING, "cannot find key %s", KEY_ALG_RAW_STREAM_BF);
     }
 
     if (TRUE == json_object_object_get_ex(alg_config, KEY_ALG_RAW_STREAM_AGC, &alg_raw_stream_agc_object)) {
@@ -379,6 +403,8 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
             siren_printf(SIREN_INFO, "enable raw stream agc %d", siren_config.alg_config.alg_raw_stream_bf);
         }
         json_object_put(alg_raw_stream_agc_object);
+    } else {
+        siren_printf(SIREN_WARNING, "cannot find key %s", KEY_ALG_RAW_STREAM_AGC);
     }
 
     if (TRUE == json_object_object_get_ex(alg_config, KEY_ALG_VT_ENABLE, &alg_vt_enable_object)) {
@@ -387,6 +413,8 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
             siren_printf(SIREN_INFO, "enable vt %d", siren_config.alg_config.alg_vt_enable);
         }
         json_object_put(alg_vt_enable_object);
+    } else {
+        siren_printf(SIREN_WARNING, "cannot find key %s", KEY_ALG_VT_ENABLE);
     }
 
     if (TRUE == json_object_object_get_ex(alg_config, KEY_ALG_VAD_ENABLE, &alg_vad_enable_object)) {
@@ -395,6 +423,8 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
             siren_printf(SIREN_INFO, "enable vad %d", siren_config.alg_config.alg_vad_enable);
         }
         json_object_put(alg_vad_enable_object);
+    } else {
+        siren_printf(SIREN_WARNING, "cannot find key %s", KEY_ALG_VAD_ENABLE);
     }
 
     if (TRUE == json_object_object_get_ex(alg_config, KEY_ALG_VAD_MICS, &alg_vad_mics_object)) {
@@ -415,8 +445,9 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
                          build_printable_indx(siren_config.alg_config.alg_vad_mics).c_str());
         }
         json_object_put(alg_vad_mics_object);
+    } else {
+        siren_printf(SIREN_WARNING, "cannot find key %s", KEY_ALG_VAD_MICS);
     }
-
 
     if (TRUE == json_object_object_get_ex(alg_config, KEY_ALG_MIC_POS, &alg_mic_pos_object)) {
         if ((type = json_object_get_type(alg_mic_pos_object)) == json_type_array) {
@@ -427,7 +458,7 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
                     if ((type = json_object_get_type(pos_idx)) == json_type_array) {
                         int mic_pos_len = json_object_array_length(pos_idx);
                         MicPos mic;
-                        for (int j = 0; j < len; j++) {
+                        for (int j = 0; j < mic_pos_len; j++) {
                             json_object *pos_i = json_object_array_get_idx(pos_idx, j);
                             if ((type = json_object_get_type(pos_i)) == json_type_double) {
                                 mic.pos.push_back(json_object_get_double(pos_i));
@@ -440,10 +471,12 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
 
             for (MicPos mic : siren_config.alg_config.alg_mic_pos) {
                 siren_printf(SIREN_INFO, "mic pos: %s",
-                             build_printable_indx(mic.pos).c_str());
+                             build_printable_indx<long double>(mic.pos).c_str());
             }
         }
         json_object_put(alg_mic_pos_object);
+    } else {
+        siren_printf(SIREN_WARNING, "cannot find key %s", KEY_ALG_MIC_POS);
     }
 
     if (TRUE == json_object_object_get_ex(alg_config, KEY_ALG_SL_MICS, &alg_sl_mics_object)) {
@@ -464,6 +497,8 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
                          build_printable_indx(siren_config.alg_config.alg_sl_mics).c_str());
         }
         json_object_put(alg_sl_mics_object);
+    } else {
+        siren_printf(SIREN_WARNING, "cannot find key %s", KEY_ALG_SL_MICS);
     }
 
     if (TRUE == json_object_object_get_ex(alg_config, KEY_ALG_BF_MICS, &alg_bf_mics_object)) {
@@ -484,6 +519,8 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
                          build_printable_indx(siren_config.alg_config.alg_bf_mics).c_str());
         }
         json_object_put(alg_vad_mics_object);
+    } else {
+        siren_printf(SIREN_WARNING, "cannot find key %s", KEY_ALG_BF_MICS);
     }
 
     if (TRUE == json_object_object_get_ex(alg_config, KEY_ALG_OPUS_COMPRESS, &alg_opus_compress_object)) {
@@ -492,6 +529,8 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
             siren_printf(SIREN_INFO, "enable opus compression %d", siren_config.alg_config.alg_opus_compress);
         }
         json_object_put(alg_opus_compress_object);
+    } else {
+        siren_printf(SIREN_WARNING, "cannot find key %s", KEY_ALG_OPUS_COMPRESS);
     }
 
     if (TRUE == json_object_object_get_ex(alg_config, KEY_ALG_VT_PHOMOD, &alg_vt_phomod_object)) {
@@ -501,6 +540,8 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
             siren_config.alg_config.alg_vt_phomod = phomod;
         }
         json_object_put(alg_vt_phomod_object);
+    } else {
+        siren_printf(SIREN_WARNING, "cannot find key %s", KEY_ALG_VT_PHOMOD);
     }
 
     if (TRUE == json_object_object_get_ex(alg_config, KEY_ALG_VT_DNNMOD, &alg_vt_dnnmod_object)) {
@@ -510,6 +551,8 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
             siren_config.alg_config.alg_vt_dnnmod = dnnmod;
         }
         json_object_put(alg_vt_dnnmod_object);
+    } else {
+        siren_printf(SIREN_WARNING, "cannot find key %s", KEY_ALG_VT_DNNMOD);
     }
 
     if (TRUE == json_object_object_get_ex(alg_config, KEY_ALG_RS_DELAY_ON_LEFT_RIGHT_CHANNEL, &alg_rs_delay_on_left_right_channel_object)) {
@@ -518,6 +561,8 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
             siren_printf(SIREN_INFO, "enable rs delay %d", siren_config.alg_config.alg_rs_delay_on_left_right_channel);
         }
         json_object_put(alg_rs_delay_on_left_right_channel_object);
+    } else {
+        siren_printf(SIREN_WARNING, "cannot find key %s", KEY_ALG_RS_DELAY_ON_LEFT_RIGHT_CHANNEL);
     }
 
     if (TRUE == json_object_object_get_ex(alg_config, KEY_RAW_STREAM_CHANNEL_NUM, &alg_raw_stream_channel_num_object)) {
@@ -526,6 +571,8 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
             siren_printf(SIREN_INFO, "raw stream channel num %d", siren_config.raw_stream_config.raw_stream_channel_num);
         }
         json_object_put(alg_raw_stream_channel_num_object);
+    } else {
+        siren_printf(SIREN_WARNING, "cannot find key %s", KEY_RAW_STREAM_CHANNEL_NUM);
     }
 
     if (TRUE == json_object_object_get_ex(alg_config, KEY_RAW_STREAM_SAMPLE_RATE, &alg_raw_stream_sample_rate_object)) {
@@ -534,6 +581,8 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
             siren_printf(SIREN_INFO, "raw stream sample rate %d", siren_config.raw_stream_config.raw_stream_sample_rate);
         }
         json_object_put(alg_raw_stream_sample_rate_object);
+    } else {
+        siren_printf(SIREN_WARNING, "cannot find key %s", KEY_RAW_STREAM_SAMPLE_RATE);
     }
 
     if (TRUE == json_object_object_get_ex(alg_config, KEY_RAW_STREAM_BYTE, &alg_raw_stream_byte_object)) {
@@ -542,6 +591,8 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
             siren_printf(SIREN_INFO, "raw stream byte %d", siren_config.raw_stream_config.raw_stream_byte);
         }
         json_object_put(alg_raw_stream_byte_object);
+    } else {
+        siren_printf(SIREN_WARNING, "cannot find key %s", KEY_RAW_STREAM_BYTE);
     }
 
     json_object_put(basic_config);
