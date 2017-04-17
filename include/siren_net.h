@@ -1,0 +1,30 @@
+#ifndef SIREN_NET_H_
+#define SIREN_NET_H_
+
+
+namespace BlackSiren {
+typedef int siren_net_result;
+
+enum {
+    SIREN_NET_OK,
+    SIREN_NET_FAILED
+};
+
+struct UDPMessage {
+    char magic[4];
+    int len;
+    char data[32];
+};
+
+class SirenUDPAgent {
+public:
+    siren_net_result prepareRecv();
+    siren_net_result prepareSend();
+    siren_net_result pollMessage(UDPMessage &msg);    
+    siren_net_result sendMessage(UDPMessage &msg);
+private:
+    int sendSocket;
+    int recvSocket;
+};
+}
+#endif

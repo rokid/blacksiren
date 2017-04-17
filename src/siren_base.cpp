@@ -333,6 +333,7 @@ void SirenBase::processThreadHandler() {
 #endif
                 memcpy(msg->data, (char *)p, sizeof(ProcessedVoiceResult) + p->size);
                 resultWriter.writeMessage(msg);
+                delete (char *)msg;
                 delete (char *)p;
                 p = nullptr;
             }

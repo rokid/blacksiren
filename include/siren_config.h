@@ -12,8 +12,8 @@ struct MicPos {
     std::vector<long double> pos;
 };
 
-//JSON KEY
 
+//JSON KEY
 #define IPC_CHANNEL "channel"
 #define IPC_DBUS "dbus"
 #define IPC_BINDER "binder"
@@ -146,11 +146,12 @@ public:
     }
     ~SirenConfigurationManager() {}
     config_error_t parseConfigFile();
+    void updateConfigFile(bool &);
     SirenConfig& getConfigFile() {
         return siren_config;
     }
 
-    config_error_t loadConfigFromJSON(std::string &);
+    config_error_t loadConfigFromJSON(std::string &, SirenConfig &);
 
 private:
     bool validPath;

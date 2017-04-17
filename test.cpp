@@ -9,6 +9,11 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <cstdio>
+#include <curl/curl.h>
+#include <netdb.h>
+#include <sys/param.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "siren.h"
 #include "sutils.h"
@@ -339,7 +344,7 @@ void test_init() {
     input_callback.on_err_input = on_err_input_stream;
     input_callback.read_input = read_input_stream;
 
-    siren = init_siren(nullptr, "/data/blacksiren.json", &input_callback);
+    siren = init_siren(nullptr, "blacksiren.json", &input_callback);
     if (siren == 0) {
         siren_printf(BlackSiren::SIREN_INFO, "init siren failed");
         return;
@@ -424,7 +429,7 @@ int read_xmos_input_stream(void *token,  char *buff, int len) {
     //buff[len/2 + 2] = 'c';
     //buff[len/2 + 3] = 'd';
     //siren_printf(BlackSiren::SIREN_INFO, "before read stream");
-    mic_array_device->read_stream(mic_array_device, buff, size);
+    mic_array_device->read_stream(mic_array_device, buff, len);
     //recordingDebugStream.write(buff, len);
     //buff[len/2 + 4] = '\0';
     //std::cout<<buff + len/2<<std::endl;
@@ -464,16 +469,16 @@ void test_xmos() {
     siren_printf(BlackSiren::SIREN_INFO, "start recording test");
     start_siren_process_stream(siren, &proc_callback);
 
-#if 0
+#if 1
     std::thread t([&] {
-        std::this_thread::sleep_for(std::chrono::seconds(10));
-        siren_printf(BlackSiren::SIREN_INFO, "test set state awake sync");
-        set_siren_state(siren, SIREN_STATE_AWAKE, nullptr);
-        siren_printf(BlackSiren::SIREN_INFO, "now state is in wake");
+        //std::this_thread::sleep_for(std::chrono::seconds(10));
+        //siren_printf(BlackSiren::SIREN_INFO, "test set state awake sync");
+        //set_siren_state(siren, SIREN_STATE_AWAKE, nullptr);
+        //siren_printf(BlackSiren::SIREN_INFO, "now state is in wake");
         std::this_thread::sleep_for(std::chrono::seconds(10));
         siren_printf(BlackSiren::SIREN_INFO, "test set state sleep async");
         set_siren_state(siren, SIREN_STATE_SLEEP, &state_changed_callback);
-        std::this_thread::sleep_for(std::chrono::seconds(100));
+        std::this_thread::sleep_for(std::chrono::seconds(100000));
     });
 
     t.join();
@@ -500,16 +505,70 @@ void test_mic() {
 
     recordingDebugStream.open("/data/test.pcm", std::ios::out | std::ios::binary);
     if (0 != mic_array_device->start_stream(mic_array_device)) {
-        std::cout<<"mic_array start stream failed"<<std::endl;
+        std::cout << "mic_array start stream failed" << std::endl;
     }
     int frameSize = 8 * 4 * 480;//mic_array_device->get_stream_buff_size(mic_array_device);
     siren_printf(BlackSiren::SIREN_INFO, "use frame cnt %d", frameSize);
     char *buff = new char[frameSize];
-    for (;;){
+    for (;;) {
         int size = 0;
         mic_array_device->read_stream(mic_array_device, buff, frameSize);
-        recordingDebugStream.write(buff, frameSize);     
+        recordingDebugStream.write(buff, frameSize);
     }
+}
+
+std::string getAddressByHostname(const char *hostname) {
+    std::string t;
+    if (hostname == nullptr) {
+        siren_printf(BlackSiren::SIREN_ERROR, "host name is null");
+        return t;
+    }
+
+    hostent *record = gethostbyname(hostname);
+    if (record == NULL) {
+        siren_printf(BlackSiren::SIREN_ERROR, "cannot find hostname %s", hostname);
+        return t;
+    }
+
+    in_addr *addr = (in_addr *)record->h_addr;
+    t = inet_ntoa(* addr);
+
+    return t;
+}
+
+void test_download() {
+    CURL *curl;
+    CURLcode res;
+
+    curl_global_init(CURL_GLOBAL_DEFAULT);
+    FILE *f = fopen("/data/blacksiren/blacksiren.json", "w");
+    curl = curl_easy_init();
+    if (curl) {
+        std::string ip = getAddressByHostname("config.open.rokid.com");
+        if (ip.empty()) {
+            siren_printf(BlackSiren::SIREN_ERROR, "cannot find address for host name config.open.rokid.com");
+            return;
+        } else {
+            siren_printf(BlackSiren::SIREN_INFO, "address is %s", ip.c_str());
+        }
+        
+        curl_easy_setopt(curl, CURLOPT_URL, "https://config.open.rokid.com/openconfig/blacksiren.json");
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)f);
+        //curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+
+        res = curl_easy_perform(curl);
+        if (res != CURLE_OK) {
+            siren_printf(BlackSiren::SIREN_ERROR, "perfrom curl failed with %s", curl_easy_strerror(res));
+        }
+
+        curl_easy_cleanup(curl);
+    } else {
+        siren_printf(BlackSiren::SIREN_ERROR, "init curl failed");
+        return;
+    }
+    
+    curl_global_cleanup();
 }
 
 int main(void) {
@@ -523,4 +582,5 @@ int main(void) {
     //test_recording();
     //test_xmos();
     //test_mic();
+    //test_download();
 }

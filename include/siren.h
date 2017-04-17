@@ -7,7 +7,6 @@
 extern "C" {
 #endif
 
-
 typedef int32_t siren_status_t;
 typedef int32_t siren_event_t;
 typedef int32_t siren_state_t;
@@ -36,9 +35,15 @@ typedef void (*on_voice_event_t)(void *token, int length, siren_event_t event,
                                  int has_voice, double sl_degree, double energy, double threshold,
                                  int has_voiceprint);
 
+typedef void (*on_net_event_t)(void *token, char *data, int len);
+
 typedef struct {
     on_voice_event_t voice_event_callback;
 } siren_proc_callback_t;
+
+typedef struct {
+    on_net_event_t net_event_callback;
+} siren_net_callback_t;
 
 typedef void (*on_raw_voice_t)(void *token, int length, void *buff);
 
@@ -93,6 +98,10 @@ void set_siren_state(siren_t siren, siren_state_t state, siren_state_changed_cal
 void set_siren_steer(siren_t siren, float ho, float ver);
 void destroy_siren(siren_t siren);
 siren_status_t rebuild_vt_word_list(siren_t siren, const char **vt_word_list);
+
+void start_siren_monitor(siren_t siren, siren_net_callback_t *callback);
+void broadcast_siren_event(siren_t siren, char *data, int len);
+
 
 #ifdef __cplusplus
 }

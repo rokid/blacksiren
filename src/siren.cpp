@@ -164,3 +164,28 @@ siren_status_t rebuild_vt_word_list(siren_t siren, const char **vt_word_list, in
     SirenProxy *proxy = (SirenProxy *)siren;
     return proxy->rebuild_vt_word_list(vt_word_list, num);
 }
+
+void start_siren_monitor(siren_t siren, siren_net_callback_t *callback) {
+    if (siren == 0) {
+        siren_printf(BlackSiren::SIREN_ERROR, "sire is null");
+        return;
+    }
+    
+    if (callback == nullptr) {
+        siren_printf(BlackSiren::SIREN_ERROR, "callback is nullptr");
+        return;
+    }
+
+    SirenProxy *proxy = (SirenProxy *)siren;
+    proxy->start_siren_monitor(callback);
+}
+
+void broadcast_siren_event(siren_t siren, char *data, int len) {
+    if (siren == 0) {
+        siren_printf(BlackSiren::SIREN_ERROR, "siren is null");
+        return;
+    }
+
+    SirenProxy *proxy = (SirenProxy *)siren;
+    proxy->broadcast_siren_event(data, len);
+}

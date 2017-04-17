@@ -1,7 +1,10 @@
 #ifndef SIREN_PROXY_H_
+
 #define SIREN_PROXY_H_
 
 #include <thread>
+#include <functional>
+#include <future>
 #include <unistd.h>
 #include <mutex>
 #include <condition_variable>
@@ -85,11 +88,12 @@ public:
         procStreamStart(false),
         recordStreamStart(false),
         recordingThread(nullptr),
-        requestQueue(32, nullptr)
+        requestQueue(32, nullptr),
+        udpRecvStart(false)
     {
 
     }
-    virtual ~SirenProxy() = default;
+    virtual ~SirenProxy() {}
 
     virtual siren_status_t init_siren(void *token, const char *path, siren_input_if_t *input) override;
     virtual void start_siren_process_stream(siren_proc_callback_t *callback) override;
@@ -119,6 +123,10 @@ public:
 
     void requestThreadHandler();
     void responseThreadHandler();
+    void monitorThreadHandler();
+
+    void start_siren_monitor(siren_net_callback_t *callback);
+    void broadcast_siren_event(char *data, int len); 
 private:
     std::function<void(void*, int)> stateChangeCallback; 
     void *token;
@@ -126,6 +134,8 @@ private:
     friend class RecordingThread;
     void launchRequestThread();
     void launchResponseThread();
+    void launchMonitorThread();
+
     void waitingRequestResponseThread();
     void stopRequestThread(bool onInit);
     bool requestResponseLaunch;
@@ -155,6 +165,7 @@ private:
     SirenConfigurationManager *global_config;
     siren_input_if_t *input_callback;
     siren_proc_callback_t *proc_callback;
+    siren_net_callback_t *net_callback;
 
     bool realStreamStart;
     bool procStreamStart;
@@ -167,6 +178,13 @@ private:
     LFQueue requestQueue;  
     int siren_pid;
     siren_state_t prevState; 
+
+    //monitor
+    std::atomic_bool udpRecvStart;
+    std::promise<void> udpRecvOncePromise;
+    std::thread monitorThread;
+
+
 };
 
 

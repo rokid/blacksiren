@@ -557,11 +557,31 @@ void SirenProxy::destroy_siren() {
     siren_printf(SIREN_INFO, "now we can exit...");
 }
 
+void SirenProxy::monitorThreadHandler() {
+
+}
+
+void SirenProxy::launchMonitorThread() {
+    std::future<void> udpRecvStartFuture = udpRecvOncePromise.get_future();
+    std::thread t(&SirenProxy::monitorThreadHandler, this);
+    monitorThread = std::move(t);
+    udpRecvStartFuture.wait();
+}
+
 siren_status_t SirenProxy::rebuild_vt_word_list(const char **vt_word_list, int num) {
     return SIREN_STATUS_OK;
 }
 
+void SirenProxy::start_siren_monitor(siren_net_callback_t *callback) {
+    this->net_callback = callback;
 
+    //start udp receiver thread
+    launchMonitorThread();
+    siren_printf(SIREN_INFO, "launch monitor thread done");
+    
+}
 
+void SirenProxy::broadcast_siren_event(char *data, int len) {
 
+}
 }

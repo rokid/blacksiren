@@ -40,7 +40,7 @@
 		"alg_opus_compress":false,
 		"alg_vt_phomod":"/system/workdir_cn/cn.tri3a.hmms.fix",
 		"alg_vt_dnnmod":"/system/workdir_cn/final.svd.nnet.casia.160429",
-		"alg_rs_delay_on_right_channel":true,
+		"alg_rs_delay_on_left_right_channel":true,
 		"raw_stream_channel_num":1,
 		"raw_stream_sample_rate":16000,
 		"raw_stream_byte":2
