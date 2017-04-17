@@ -96,6 +96,7 @@ LOCAL_STATIC_LIBRARIES += libjsonc_static
 
 include $(BUILD_SHARED_LIBRARY)
 
+ifeq (,$(ONE_SHOT_MAKEFILE))
 include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES := \
@@ -109,6 +110,6 @@ LOCAL_C_INCLUDES += \
 LOCAL_MODULE := test
 LOCAL_SHARED_LIBRARIES := libbsiren libhardware libcurl
 LOCAL_STATIC_LIBRARIES := libjsonc_static
-
 include $(BUILD_EXECUTABLE)
+endif
 include $(wildcard $(LOCAL_PATH)/java/jni/Android.mk)
