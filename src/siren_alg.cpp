@@ -15,6 +15,7 @@
 #include "siren_alg.h"
 #include "sutils.h"
 #include "isiren.h"
+#include "siren_preprocessor.h"
 
 namespace BlackSiren {
 
@@ -87,7 +88,8 @@ siren_status_t SirenAudioPreProcessor::init() {
     //TODO use config file
     currentLan = config.alg_config.alg_lan;
     int status = 0;
-
+#ifdef CONFIG_USE_AD1
+    siren_printf(SIREN_INFO, "use ad1");
     status = r2ad1_sysinit(config.alg_config.alg_legacy_dir.c_str());
     if (status != 0) {
         siren_printf(SIREN_ERROR, "init ad1 failed");
@@ -99,11 +101,25 @@ siren_status_t SirenAudioPreProcessor::init() {
 
     ad1 = r2ad1_create();
     assert (ad1 != nullptr);
+#else
+    siren_printf(SIREN_INFO, "use preprocessor!");
+    pImpl = std::make_shared<SirenPreprocessorImpl>(config);
+    status = pImpl->init();
+    if (status != 0) {
+        siren_printf(SIREN_ERROR, "init preprocessor impl");
+        preprocessorInit = false;
+        return SIREN_STATUS_ERROR;
+    } else {
+        preprocessorInit = true;
+    }
+#endif
+
     return SIREN_STATUS_OK;
 }
 
 
 void SirenAudioPreProcessor::preprocess(char *rawBuffer, PreprocessVoicePackage **voicePackage) {
+#ifdef CONFIG_USE_AD1
     if (!ad1Init) {
         siren_printf(SIREN_ERROR, "ad1 not init yet");
         return;
@@ -130,12 +146,46 @@ void SirenAudioPreProcessor::preprocess(char *rawBuffer, PreprocessVoicePackage 
 
     r2ad1_getdata(ad1, vp->data, len);
     *voicePackage = vp;
+#else
+    if (!preprocessorInit) {
+        siren_printf(SIREN_ERROR, "preprocessor not init");
+        return;
+    }
+
+    int aec = 0;
+    if (rawBuffer == nullptr) {
+        siren_printf(SIREN_ERROR, "raw buffer is null");
+        return;
+    }
+
+    aec = pImpl->processData(rawBuffer, frameSize);
+    int len = pImpl->getResultLen();
+    if (len <= 0) {
+        return;
+    }
+
+    PreprocessVoicePackage *vp = allocatePreprocessVoicePackage(SIREN_REQUEST_MSG_DATA_PROCESS, aec, len);
+    if (vp == nullptr) {
+        siren_printf(SIREN_ERROR, "allocatePreprocessVoicePackage FAILED");
+        return;
+    }
+
+    pImpl->getResult(vp->data, len);
+    *voicePackage = vp;
+#endif
 }
 
 siren_status_t SirenAudioPreProcessor::destroy() {
+#ifdef CONFIG_USE_AD1
     if (ad1Init) {
         r2ad1_sysexit();
     }
+#else
+    if (preprocessorInit) {
+        pImpl->destroy();
+    }
+#endif
+
     return SIREN_STATUS_OK;
 }
 

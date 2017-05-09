@@ -17,6 +17,7 @@
 #include "sutils.h"
 #include "siren.h"
 #include "isiren.h"
+#include "siren_net.h"
 #include "siren_base.h"
 #include "siren_proxy.h"
 #include "siren_config.h"
@@ -81,6 +82,21 @@ bool RecordingThread::init() {
     siren_printf(SIREN_INFO, "recording thread get sockets[0] rmem to %d", real_rmem);
     getsockopt(sockets[1], SOL_SOCKET, SO_RCVBUF, &real_rmem, &len);
     siren_printf(SIREN_INFO, "recording thread get sockets[1] rmem to %d", real_rmem);
+    
+    if (config.debug_config.mic_array_record) {
+        std::string basePath("/mic_array.pcm");
+        micRecording.assign(config.debug_config.recording_path).append(basePath);
+        siren_printf(SIREN_INFO, "mic array debug use path %s", micRecording.c_str());
+        micRecordingStream.open(micRecording.c_str(), std::ios::out|std::ios::binary);
+        if (micRecordingStream.good()) {
+            doMicRecording = true;
+        } else {
+            doMicRecording = false;
+            siren_printf(SIREN_ERROR, "mic array recording path not exist");
+        }
+    } else {
+        doMicRecording = false;
+    }
 
     return true;
 }
@@ -156,9 +172,9 @@ void RecordingThread::recordingFn() {
                 siren_printf(SIREN_INFO, "proxy recording thread exit...");
                 return;
             }
-
+            //siren_printf(SIREN_INFO, "recording!!");
             len = pSiren->input_callback->read_input(pSiren->token, frameBuffer, frameSize);
-            //
+            
             if (!recordingStart) {
                 continue;
             }
@@ -180,6 +196,10 @@ void RecordingThread::recordingFn() {
 
         //send to other side
         len = write(sockets[0], frameBuffer, frameSize);
+        if (doMicRecording) {
+            micRecordingStream.write(frameBuffer, frameSize);
+        }
+        
         //siren_printf(SIREN_INFO, "recording write return %d", len);
         if (len < 0) {
             siren_printf(SIREN_ERROR, "write error on socket with %s", strerror(errno));
@@ -196,33 +216,49 @@ siren_status_t SirenProxy::init_siren(void *token, const char *path, siren_input
         siren_printf(SIREN_ERROR, "alloc config manager failed");
         return SIREN_STATUS_ERROR;
     }
-
     
     siren_status_t result = SIREN_STATUS_OK;
-    result = global_config->parseConfigFile();
+    config_error_t config_result = CONFIG_OK;
+    config_result = global_config->parseConfigFile();
+    if (config_result != CONFIG_OK) {
+        siren_printf(SIREN_ERROR, "config failed");
+        delete global_config;
+        return SIREN_STATUS_ERROR;
+    }
+
     SirenConfig& config = global_config->getConfigFile();
     input_callback = input;
     this->token = token;
 
     //use share mem
     if (config.siren_use_share_mem) {
-
         //use socket
+    }
+
+    udpAgent.setupConfig(&config);
+    if (SIREN_NET_FAILED == udpAgent.prepareSend()) {
+        siren_printf(SIREN_ERROR, "prepare send failed");
     }
 
     //init request channel
     if (!requestChannel.open()) {
         siren_printf(SIREN_ERROR, "request channel open failed");
+        delete global_config;
+        global_config = nullptr;
         return SIREN_STATUS_ERROR;
     }
     if (!responseChannel.open()) {
         siren_printf(SIREN_ERROR, "response channel open failed");
+        delete global_config;
+        global_config = nullptr;
         return SIREN_STATUS_ERROR;
     }
     //will release in destroy
     recordingThread = new RecordingThread(this);
     if (!recordingThread->init()) {
         siren_printf(SIREN_ERROR, "init recording thread failed");
+        delete global_config;
+        global_config = nullptr;
         clearThread();
         return SIREN_STATUS_ERROR;
     }
@@ -233,7 +269,9 @@ siren_status_t SirenProxy::init_siren(void *token, const char *path, siren_input
     siren_pid = fork();
     if (siren_pid < 0) {
         siren_printf(SIREN_ERROR, "fork siren failed...");
+        delete global_config;
         delete recordingThread;
+        global_config = nullptr;
         return SIREN_STATUS_ERROR;
     } else if (siren_pid == 0) {
         //gose for siren
@@ -542,6 +580,9 @@ void SirenProxy::destroy_siren() {
     recordingThread->stop();
     siren_printf(SIREN_INFO, "recording thread stops");
     delete recordingThread;
+    if (global_config) {
+        delete global_config;
+    }
 
     //let request exit
     stopRequestThread(false);
@@ -558,7 +599,32 @@ void SirenProxy::destroy_siren() {
 }
 
 void SirenProxy::monitorThreadHandler() {
+    while (1) {
+        udpRecvOncePromise.set_value();
+        UDPMessage msg;
+        memset (&msg, 0, sizeof(UDPMessage));
+        if (SIREN_NET_FAILED == udpAgent.pollMessage(msg)) {
+            siren_printf(SIREN_ERROR, "poll message failed");
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            siren_printf(SIREN_ERROR, "prepare again");
+            udpAgent.prepareSend();
+            continue;
+        }
 
+        if (msg.magic[0] != 'a' ||
+                msg.magic[1] != 'a' ||
+                msg.magic[2] != 'b' ||
+                msg.magic[3] != 'b' ||
+                msg.len > 32) {
+            siren_printf(SIREN_ERROR, "illegal message");
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            continue;
+        }
+
+        if (net_callback != nullptr) {
+            net_callback->net_event_callback(token, msg.data, msg.len);
+        }
+    }
 }
 
 void SirenProxy::launchMonitorThread() {
@@ -574,14 +640,39 @@ siren_status_t SirenProxy::rebuild_vt_word_list(const char **vt_word_list, int n
 
 void SirenProxy::start_siren_monitor(siren_net_callback_t *callback) {
     this->net_callback = callback;
+    if (SIREN_NET_FAILED == udpAgent.prepareRecv()) {
+        siren_printf(SIREN_ERROR, "prepare rcv failed");
+    }
 
     //start udp receiver thread
     launchMonitorThread();
     siren_printf(SIREN_INFO, "launch monitor thread done");
-    
+        
 }
 
-void SirenProxy::broadcast_siren_event(char *data, int len) {
+siren_status_t SirenProxy::broadcast_siren_event(char *data, int len) {
+    if (len > 32) {
+        siren_printf(SIREN_ERROR, "only support package size less than 32");
+        return SIREN_STATUS_ERROR;
+    }
 
+    UDPMessage msg;
+    memset(&msg, 0, sizeof(UDPMessage));
+
+    msg.magic[0] = 'a';
+    msg.magic[1] = 'a';
+    msg.magic[2] = 'b';
+    msg.magic[3] = 'b';
+
+    msg.len = len;
+    memcpy (msg.data, data, len);
+    if (SIREN_NET_OK != udpAgent.sendMessage(msg)) {
+        siren_printf(SIREN_ERROR, "broadcast failed prepare again");
+        udpAgent.prepareSend();
+        return SIREN_STATUS_ERROR;
+    }
+    return SIREN_STATUS_OK;
 }
+
+
 }

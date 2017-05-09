@@ -180,12 +180,12 @@ void start_siren_monitor(siren_t siren, siren_net_callback_t *callback) {
     proxy->start_siren_monitor(callback);
 }
 
-void broadcast_siren_event(siren_t siren, char *data, int len) {
+siren_status_t broadcast_siren_event(siren_t siren, char *data, int len) {
     if (siren == 0) {
         siren_printf(BlackSiren::SIREN_ERROR, "siren is null");
-        return;
+        return SIREN_STATUS_ERROR;
     }
 
     SirenProxy *proxy = (SirenProxy *)siren;
-    proxy->broadcast_siren_event(data, len);
+    return proxy->broadcast_siren_event(data, len);
 }

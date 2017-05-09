@@ -7,6 +7,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <functional>
+#include <fstream>
 
 #include "lfqueue.h"
 #include "siren_channel.h"
@@ -79,6 +80,16 @@ private:
 
     LFQueue processQueue;
     LFQueue recordingQueue;
+
+    bool doPreRecording;
+    std::string preRecording;
+    std::ofstream preRecordingStream;
+
+    bool doProcRecording;
+    std::string procRecording;
+    std::ofstream procRecordingStream;
+
+
 };
 
 

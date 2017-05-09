@@ -8,9 +8,11 @@
 #include <unistd.h>
 #include <mutex>
 #include <condition_variable>
+#include <fstream>
 
 #include "siren_config.h"
 #include "siren_channel.h"
+#include "siren_net.h"
 #include "isiren.h"
 #include "sutils.h"
 #include "lfqueue.h"
@@ -68,6 +70,11 @@ private:
 
     int frameSize;
     int sockets[2];
+
+    //debug
+    bool doMicRecording;
+    std::string micRecording;
+    std::ofstream micRecordingStream;
 };
 
 class SirenProxy : public ISiren {
@@ -126,7 +133,7 @@ public:
     void monitorThreadHandler();
 
     void start_siren_monitor(siren_net_callback_t *callback);
-    void broadcast_siren_event(char *data, int len); 
+    siren_status_t broadcast_siren_event(char *data, int len); 
 private:
     std::function<void(void*, int)> stateChangeCallback; 
     void *token;
@@ -183,8 +190,7 @@ private:
     std::atomic_bool udpRecvStart;
     std::promise<void> udpRecvOncePromise;
     std::thread monitorThread;
-
-
+    SirenUDPAgent udpAgent;
 };
 
 

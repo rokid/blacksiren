@@ -18,7 +18,7 @@ siren_net_result SirenUDPAgent::prepareRecv() {
     bzero(&addrto, sizeof(struct sockaddr_in));
     addrto.sin_family = AF_INET;
     addrto.sin_addr.s_addr = htonl(INADDR_ANY);
-    addrto.sin_port = htons(CONFIG_MONITOR_UDP_PORT);
+    addrto.sin_port = htons(config->udp_port);
 
     recvSocket = -1;
     if ((recvSocket = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
@@ -26,19 +26,15 @@ siren_net_result SirenUDPAgent::prepareRecv() {
         return SIREN_NET_FAILED;
     }
 
-    const int opt = 1;
-    int nb = 0;
-    nb = setsockopt(recvSocket, SOL_SOCKET, SO_BROADCAST, (char *)opt, sizeof(opt));
-    if (nb < 0) {
-        siren_printf(SIREN_ERROR, "set socket broadcast failed");
-        return SIREN_NET_FAILED;
-    }
-    
     if (bind(recvSocket, (struct sockaddr *)&addrto, sizeof(struct sockaddr_in)) == -1) {
         siren_printf(SIREN_ERROR, "failed to bind socket to local addr");
         return SIREN_NET_FAILED;
     }
 
+    bzero(&from, sizeof(struct sockaddr_in));
+    from.sin_family = AF_INET;
+    from.sin_addr.s_addr = htonl(INADDR_ANY);
+    from.sin_port = htons(config->udp_port);
     return SIREN_NET_OK;
 }
 
@@ -51,22 +47,21 @@ siren_net_result SirenUDPAgent::prepareSend() {
 
     const int opt = 1;
     int nb = 0;
-    nb = setsockopt(sendSocket, SOL_SOCKET, SO_BROADCAST, (char *)&opt, sizeof(opt)); 
+    nb = setsockopt(sendSocket, SOL_SOCKET, SO_BROADCAST | SO_REUSEADDR, (char *)&opt, sizeof(opt)); 
     if (nb == -1) {
-        siren_printf(SIREN_ERROR, "failed to set send sock to broadcast");
+        siren_printf(SIREN_ERROR, "failed to set send sock to broadcast since %s", strerror(errno));
         return SIREN_NET_FAILED;
     }
+
+    bzero(&addrto, sizeof(struct sockaddr_in));
+    addrto.sin_family = AF_INET;
+    addrto.sin_addr.s_addr = htonl(INADDR_BROADCAST);
+    addrto.sin_port = htons(config->udp_port);
 
     return SIREN_NET_OK;
 }
 
 siren_net_result SirenUDPAgent::pollMessage(UDPMessage &msg) {
-    struct sockaddr_in from;
-    bzero(&from, sizeof(struct sockaddr_in));
-    from.sin_family = AF_INET;
-    from.sin_addr.s_addr = htonl(INADDR_ANY);
-    from.sin_port = htons(CONFIG_MONITOR_UDP_PORT);
-    
     int len = sizeof(sockaddr_in);
     int ret = recvfrom(recvSocket, &msg, sizeof(UDPMessage), 0, 
             (struct sockaddr *)&from, (socklen_t *)&len);
@@ -79,6 +74,11 @@ siren_net_result SirenUDPAgent::pollMessage(UDPMessage &msg) {
 }
 
 siren_net_result SirenUDPAgent::sendMessage(UDPMessage &msg) {
+    int nlen = sizeof(addrto);
+    int ret = sendto(sendSocket, &msg, sizeof(UDPMessage), 0, (sockaddr *)&addrto, nlen);
+    if (ret <= 0) {
+        siren_printf(SIREN_ERROR, "send broadcast failed since %s", strerror(errno));
+    }
     return SIREN_NET_OK;
 } 
 

@@ -20,7 +20,7 @@
 #include "lfqueue.h"
 #include "siren_channel.h"
 
-#include "mic/mic_array.h"
+#include "r2hw/mic_array.h"
 
 void test_fork_socketpair() {
     int sockets[2], child;
@@ -420,6 +420,12 @@ void stop_xmos_input_stream(void *token) {
     mic_array_device->stop_stream(mic_array_device);
 }
 
+void on_net_event(void *token, char *data, int len) {
+    data[len - 1] = '\0';
+    std::string t(data);
+    siren_printf(BlackSiren::SIREN_INFO, "recv net event %s", t.c_str());
+}
+
 int read_xmos_input_stream(void *token,  char *buff, int len) {
     //mic_array_device->read_stream(mic_array_device, buff, (unsigned long long *)&len);
     //memset(buff, 0, len);
@@ -451,7 +457,7 @@ void test_xmos() {
     siren_input_if_t input_callback;
     siren_proc_callback_t proc_callback;
     siren_state_changed_callback_t state_changed_callback;
-
+    siren_net_callback_t net_callback;
     state_changed_callback.state_changed_callback = on_siren_state_changed_fn;
     input_callback.init_input = init_xmos_input_stream;
     input_callback.release_input = release_xmos_input_stream;
@@ -460,6 +466,7 @@ void test_xmos() {
     input_callback.on_err_input = on_err_xmos_input_stream;
     input_callback.read_input = read_xmos_input_stream;
 
+    net_callback.net_event_callback = on_net_event;
     proc_callback.voice_event_callback = on_voice_event;
     siren = init_siren((void *)&magic, nullptr, &input_callback);
     if (siren == 0) {
@@ -467,9 +474,12 @@ void test_xmos() {
         return;
     }
     siren_printf(BlackSiren::SIREN_INFO, "start recording test");
+    
+    start_siren_monitor(siren, &net_callback);
+    siren_printf(BlackSiren::SIREN_INFO, "start process");
     start_siren_process_stream(siren, &proc_callback);
 
-#if 1
+#if 0
     std::thread t([&] {
         //std::this_thread::sleep_for(std::chrono::seconds(10));
         //siren_printf(BlackSiren::SIREN_INFO, "test set state awake sync");
@@ -571,6 +581,36 @@ void test_download() {
     curl_global_cleanup();
 }
 
+void test_send() {
+    siren_input_if_t input_callback;
+    siren_proc_callback_t proc_callback;
+    siren_state_changed_callback_t state_changed_callback;
+    state_changed_callback.state_changed_callback = on_siren_state_changed_fn;
+    input_callback.init_input = init_xmos_input_stream;
+    input_callback.release_input = release_xmos_input_stream;
+    input_callback.start_input = start_xmos_input_stream;
+    input_callback.stop_input = stop_xmos_input_stream;
+    input_callback.on_err_input = on_err_xmos_input_stream;
+    input_callback.read_input = read_xmos_input_stream;
+
+    proc_callback.voice_event_callback = on_voice_event;
+    siren = init_siren((void *)&magic, nullptr, &input_callback);
+    if (siren == 0) {
+        siren_printf(BlackSiren::SIREN_INFO, "init siren failed");
+        return;
+    }
+    siren_printf(BlackSiren::SIREN_INFO, "start recording test");
+    start_siren_process_stream(siren, &proc_callback);
+
+    for (;;) {
+        siren_printf(BlackSiren::SIREN_INFO, "send broadcast");
+        if (SIREN_STATUS_OK != broadcast_siren_event(siren, "hello world", 13)) {
+            siren_printf(BlackSiren::SIREN_ERROR, "send failed");
+        }
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+}
+
 int main(void) {
     //test_common();
     //test_channel();
@@ -578,9 +618,11 @@ int main(void) {
     //test_thread_hardware_concurrency();
     //test_fork_socketpair();
 
-    test_init();
+    //test_init();
     //test_recording();
-    //test_xmos();
+    test_xmos();
     //test_mic();
     //test_download();
+
+    //test_send();
 }

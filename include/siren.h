@@ -100,7 +100,7 @@ void destroy_siren(siren_t siren);
 siren_status_t rebuild_vt_word_list(siren_t siren, const char **vt_word_list);
 
 void start_siren_monitor(siren_t siren, siren_net_callback_t *callback);
-void broadcast_siren_event(siren_t siren, char *data, int len);
+siren_status_t broadcast_siren_event(siren_t siren, char *data, int len);
 
 
 #ifdef __cplusplus

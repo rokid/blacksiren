@@ -21,7 +21,9 @@ struct MicPos {
 
 #define KEY_BASIC_CONFIG "basic_config"
 #define KEY_ALG_CONFIG "alg_config"
+#define KEY_DEBUG_CONFIG "debug_config"
 
+#define KEY_MIC_NUM "mic_num"
 #define KEY_MIC_CHANNEL_NUM "mic_channel_num"
 #define KEY_MIC_SAMPLE_RATE "mic_sample_rate"
 #define KEY_MIC_AUDIO_BYTE "mic_audio_byte"
@@ -33,6 +35,8 @@ struct MicPos {
 
 #define KEY_SIREN_INPUT_ERR_RETRY_NUM "siren_input_err_retry_num"
 #define KEY_SIREN_INPUT_ERR_RETRY_TIMEOUT "siren_input_err_retry_timeout"
+
+#define KEY_SIREN_MONITOR_UDP_PORT "siren_monitor_udp_port"
 
 #define KEY_ALG_USE_LEGACY_CONFIG_FILE "alg_use_legacy_config_file"
 #define KEY_ALG_LEGACY_CONFIG_FILE_PATH "alg_legacy_config_file_path"
@@ -66,6 +70,13 @@ struct MicPos {
 #define KEY_RAW_STREAM_CHANNEL_NUM "raw_stream_channel_num"
 #define KEY_RAW_STREAM_SAMPLE_RATE "raw_stream_sample_rate"
 #define KEY_RAW_STREAM_BYTE "raw_stream_byte"
+
+#define KEY_DEBUG_MIC_ARRAY_RECORD "debug_mic_array_record"
+#define KEY_DEBUG_PRE_RESULT_RECORD "debug_pre_result_record"
+#define KEY_DEBUG_PROC_RESULT_RECORD "debug_proc_result_record"
+#define KEY_DEBUG_RS_RECORD "debug_rs_record"
+#define KEY_DEBUG_AEC_RECORD "debug_aec_record"
+#define KEY_DEBUG_RECORD_PATH "debug_record_path"
 
 struct AlgConfig {
     std::string alg_legacy_dir;
@@ -104,7 +115,18 @@ struct RawStreamConfig {
     int raw_stream_byte = 2;
 };
 
+struct DebugConfig {
+    bool mic_array_record;
+    bool preprocessed_result_record;
+    bool processed_result_record;
+    bool rs_record;
+    bool aec_record;
+
+    std::string recording_path;
+};
+
 struct SirenConfig {
+    int mic_num = 8;
     int mic_channel_num = 8;
     int mic_sample_rate = 48000;
     int mic_audio_byte = 4;
@@ -117,8 +139,11 @@ struct SirenConfig {
     int siren_input_err_retry_num = 5;
     int siren_input_err_retry_timeout = 100;
 
+    int udp_port;
+
     struct AlgConfig alg_config;
     struct RawStreamConfig raw_stream_config;
+    struct DebugConfig debug_config;
 };
 
 typedef int32_t config_error_t;
