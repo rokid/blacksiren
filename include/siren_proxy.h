@@ -8,7 +8,6 @@
 #include <unistd.h>
 #include <mutex>
 #include <condition_variable>
-#include <fstream>
 
 #include "siren_config.h"
 #include "siren_channel.h"
@@ -70,11 +69,6 @@ private:
 
     int frameSize;
     int sockets[2];
-
-    //debug
-    bool doMicRecording;
-    std::string micRecording;
-    std::ofstream micRecordingStream;
 };
 
 class SirenProxy : public ISiren {
@@ -191,6 +185,7 @@ private:
     std::promise<void> udpRecvOncePromise;
     std::thread monitorThread;
     SirenUDPAgent udpAgent;
+
 };
 
 

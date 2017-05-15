@@ -1,7 +1,6 @@
 {
 	"basic_config": {
-        "mic_num":8,
-        "mic_channel_num":8,
+		"mic_channel_num":8,
 		"mic_sample_rate":48000,
 		"mic_audio_byte":4,
 		"mic_frame_length":10,
@@ -9,8 +8,7 @@
 		"siren_channel_rmem":4194304,
 		"siren_channel_wmem":6291456,
 		"siren_input_err_retry_num":5,
-		"siren_input_err_retry_timeout":100,
-        "siren_monitor_udp_port":65456
+		"siren_input_err_retry_timeout":100
 	},
 	"alg_config": {
 		"alg_use_legacy_config_file":true,
@@ -46,13 +44,5 @@
 		"raw_stream_channel_num":1,
 		"raw_stream_sample_rate":16000,
 		"raw_stream_byte":2
-	},
-    "debug_config": {
-        "debug_mic_array_record":false,
-        "debug_pre_result_record":false,
-        "debug_proc_result_record":false,
-        "debug_rs_record":false,
-        "debug_aec_record":false,
-        "debug_record_path":"/data/blacksiren"
-    }
+	}
 }

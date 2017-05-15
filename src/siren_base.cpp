@@ -37,13 +37,13 @@ SirenBase::SirenBase(SirenConfig &config_, int socket_, SirenSocketReader &reade
     socket(socket_),
     recordingExit(false),
     recordingStart(false),
-    processQueue(4 * 1024, nullptr),
+    processQueue(4*1024, nullptr),
     recordingQueue(256, nullptr) {
 
     int channels = config.mic_channel_num;
     int sample = config.mic_sample_rate;
     int byte = config.mic_audio_byte;
-    int frameLenInMs = 1000 / config.mic_frame_length;
+    int frameLenInMs = 1000/config.mic_frame_length;
 
     frameSize = channels * sample * byte / frameLenInMs;
     frameBuffer = new char[frameSize];
@@ -93,7 +93,7 @@ void SirenBase::set_siren_state(siren_state_t state, siren_state_changed_callbac
     ((void)callback);
     PreprocessVoicePackage *voicePackage =
         allocatePreprocessVoicePackage(SIREN_REQUEST_MSG_SET_STATE,
-                                       0, sizeof(int));
+                0, sizeof(int));
     int *t = nullptr;
     t = (int *)voicePackage->data;
     t[0] = state;
@@ -103,7 +103,7 @@ void SirenBase::set_siren_state(siren_state_t state, siren_state_changed_callbac
 void SirenBase::set_siren_steer(float ho, float var) {
     PreprocessVoicePackage *voicePackage =
         allocatePreprocessVoicePackage(SIREN_REQUEST_MSG_SET_STEER,
-                                       0, sizeof(float) * 2);
+                0, sizeof(float) * 2);
     float *t = nullptr;
     t = (float *)voicePackage->data;
     t[0] = ho;
@@ -267,8 +267,26 @@ void SirenBase::processThreadHandler() {
 
     processThreadInit = true;
     initCond.notify_one();
-    std::vector<ProcessedVoiceResult*> voiceResult;
+#ifdef CONFIG_RECORDING_PATH
+    std::string path(CONFIG_STORE_PATH);
+#endif
+#ifdef CONFIG_RECORDING_MIC_ARRAY
+    std::string recordingFileMicArray("/mic_array.pcm");
+    recordingFileMicArray = path + recordingFileMicArray;
+    siren_printf(SIREN_INFO, "recording mic array message to %s", recordingFileMicArray.c_str());
+    std::ofstream testRecordingDebugStream;
+    testRecordingDebugStream.open(recordingFileMicArray.c_str(), std::ios::out | std::ios::binary);
+#endif
+#ifdef CONFIG_RECORDING_PROCESSED_DATA
+    std::string recordingFileResult("/result.pcm");
+    recordingFileResult = path + recordingFileResult;
+    siren_printf(SIREN_INFO, "recording result message to %s", recordingFileResult.c_str());
+    std::ofstream testRecordingDebugStreamResult;
+    testRecordingDebugStreamResult.open(recordingFileResult.c_str(), std::ios::out | std::ios::binary);
+#endif
     
+    
+    std::vector<ProcessedVoiceResult*> voiceResult;
     while (1) {
         PreprocessVoicePackage *pVoicePackage = nullptr;
         voiceResult.clear();
@@ -279,18 +297,18 @@ void SirenBase::processThreadHandler() {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
             continue;
         }
-
+        
         if (pVoicePackage == nullptr) {
             siren_printf(SIREN_ERROR, "process queue pop null item");
             continue;
         }
-
+        
+        //testRecordingDebugStream.write((char *)pVoicePackage->data, pVoicePackage->size);
         //handle voice process
         if (pVoicePackage->msg == SIREN_REQUEST_MSG_DATA_PROCESS) {
-            if (doPreRecording) {
-                preRecordingStream.write((char *)pVoicePackage->data, pVoicePackage->size);
-            }
-
+#ifdef CONFIG_RECORDING_MIC_ARRAY
+            testRecordingDebugStream.write((char *)pVoicePackage->data, pVoicePackage->size);
+#endif
             //siren_printf(SIREN_INFO, "start one frame process");
             audioProcessor.process(pVoicePackage, voiceResult);
             if (voiceResult.empty()) {
@@ -308,19 +326,18 @@ void SirenBase::processThreadHandler() {
                     audioProcessor.setSysState(SIREN_STATE_SLEEP, false);
                 }
                 Message *msg = allocateMessage(SIREN_RESPONSE_MSG_ON_VOICE_EVENT, sizeof(ProcessedVoiceResult) + p->size);
+#ifdef CONFIG_RECORDING_PROCESSED_DATA
                 if (p->hasVoice) {
-                    if (doProcRecording) {
-                        procRecordingStream.write((char *)p->data, p->size);
-                    }
+                    testRecordingDebugStreamResult.write((char *)p->data, p->size);
                 }
-                
+#endif
                 memcpy(msg->data, (char *)p, sizeof(ProcessedVoiceResult) + p->size);
                 resultWriter.writeMessage(msg);
                 delete (char *)msg;
                 delete (char *)p;
                 p = nullptr;
             }
-
+            
             delete (char *)pVoicePackage;
             //siren_printf(SIREN_INFO, "end one frame process");
             continue;
@@ -433,36 +450,6 @@ void SirenBase::loopRecording() {
 
 
 void SirenBase::main() {
-    if (config.debug_config.preprocessed_result_record) {
-        std::string basePath("/pre_processed.pcm");
-        siren_printf(SIREN_INFO, "recording path is %s", config.debug_config.recording_path.c_str());
-        preRecording = config.debug_config.recording_path + basePath;
-        siren_printf(SIREN_INFO, "preprocess debug use path %s", preRecording.c_str());
-        preRecordingStream.open(preRecording.c_str(), std::ios::out|std::ios::binary);
-        if (preRecordingStream.good()) {
-            doPreRecording = true;
-        } else {
-            doPreRecording = false;
-            siren_printf(SIREN_ERROR, "preprocess recording path not exist");
-        }
-    } else {
-        doPreRecording = false;
-    }
-
-    if (config.debug_config.processed_result_record) {
-        std::string basePath("/processed.pcm");
-        procRecording.assign(config.debug_config.recording_path).append(basePath);
-        siren_printf(SIREN_INFO, "processed debug use path %s", procRecording.c_str());
-        procRecordingStream.open(procRecording.c_str(), std::ios::out|std::ios::binary);
-        if (procRecordingStream.good()) {
-            doProcRecording = true;
-        } else {
-            doProcRecording = false;
-            siren_printf(SIREN_ERROR, "mic array recording path not exist");
-        }
-    }
-
-
     //launch response thread
     launchProcessThread();
     siren_printf(SIREN_INFO, "waiting process thread");

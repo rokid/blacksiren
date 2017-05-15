@@ -6,7 +6,6 @@
 //TODO: use new interface instead
 
 #include <vector>
-#include <memory>
 
 #include "legacy/r2ad1.h"
 #include "legacy/r2ad2.h"
@@ -15,9 +14,6 @@
 #include "siren.h"
 #include "siren_config.h"
 #include "common.h"
-#include "siren_preprocessor.h"
-
-
 namespace BlackSiren {
 
 struct ProcessedVoiceResult {
@@ -62,18 +58,8 @@ private:
     int currentLan;
     int averageDelay;
 
-#ifdef CONFIG_USE_AD1 
     r2ad1_htask ad1;
-#else
-    std::shared_ptr<SirenPreprocessorImpl> pImpl;
-#endif
-
-#ifdef CONFIG_USE_AD1
-    bool ad1Init = false;
-#else
-    bool preprocessorInit = false;
-#endif
-
+    bool ad1Init;
 };
 
 class SirenAudioVBVProcessor {

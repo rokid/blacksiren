@@ -7,7 +7,6 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include "siren_config.h"
 
 namespace BlackSiren {
 typedef int siren_net_result;
@@ -25,17 +24,11 @@ struct UDPMessage {
 
 class SirenUDPAgent {
 public:
-    void setupConfig(SirenConfig *config) {
-        this->config = config;
-    }
-    
     siren_net_result prepareRecv();
     siren_net_result prepareSend();
     siren_net_result pollMessage(UDPMessage &msg);    
     siren_net_result sendMessage(UDPMessage &msg);
 private:
-    SirenConfig *config;
-
     int sendSocket;
     int recvSocket;
     struct sockaddr_in from;

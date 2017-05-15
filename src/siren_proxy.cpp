@@ -82,21 +82,6 @@ bool RecordingThread::init() {
     siren_printf(SIREN_INFO, "recording thread get sockets[0] rmem to %d", real_rmem);
     getsockopt(sockets[1], SOL_SOCKET, SO_RCVBUF, &real_rmem, &len);
     siren_printf(SIREN_INFO, "recording thread get sockets[1] rmem to %d", real_rmem);
-    
-    if (config.debug_config.mic_array_record) {
-        std::string basePath("/mic_array.pcm");
-        micRecording.assign(config.debug_config.recording_path).append(basePath);
-        siren_printf(SIREN_INFO, "mic array debug use path %s", micRecording.c_str());
-        micRecordingStream.open(micRecording.c_str(), std::ios::out|std::ios::binary);
-        if (micRecordingStream.good()) {
-            doMicRecording = true;
-        } else {
-            doMicRecording = false;
-            siren_printf(SIREN_ERROR, "mic array recording path not exist");
-        }
-    } else {
-        doMicRecording = false;
-    }
 
     return true;
 }
@@ -172,9 +157,9 @@ void RecordingThread::recordingFn() {
                 siren_printf(SIREN_INFO, "proxy recording thread exit...");
                 return;
             }
-            //siren_printf(SIREN_INFO, "recording!!");
+
             len = pSiren->input_callback->read_input(pSiren->token, frameBuffer, frameSize);
-            
+            //
             if (!recordingStart) {
                 continue;
             }
@@ -196,10 +181,6 @@ void RecordingThread::recordingFn() {
 
         //send to other side
         len = write(sockets[0], frameBuffer, frameSize);
-        if (doMicRecording) {
-            micRecordingStream.write(frameBuffer, frameSize);
-        }
-        
         //siren_printf(SIREN_INFO, "recording write return %d", len);
         if (len < 0) {
             siren_printf(SIREN_ERROR, "write error on socket with %s", strerror(errno));
@@ -218,24 +199,17 @@ siren_status_t SirenProxy::init_siren(void *token, const char *path, siren_input
     }
     
     siren_status_t result = SIREN_STATUS_OK;
-    config_error_t config_result = CONFIG_OK;
-    config_result = global_config->parseConfigFile();
-    if (config_result != CONFIG_OK) {
-        siren_printf(SIREN_ERROR, "config failed");
-        delete global_config;
-        return SIREN_STATUS_ERROR;
-    }
-
+    result = global_config->parseConfigFile();
     SirenConfig& config = global_config->getConfigFile();
     input_callback = input;
     this->token = token;
 
     //use share mem
     if (config.siren_use_share_mem) {
+
         //use socket
     }
 
-    udpAgent.setupConfig(&config);
     if (SIREN_NET_FAILED == udpAgent.prepareSend()) {
         siren_printf(SIREN_ERROR, "prepare send failed");
     }
@@ -600,7 +574,6 @@ void SirenProxy::destroy_siren() {
 
 void SirenProxy::monitorThreadHandler() {
     while (1) {
-        udpRecvOncePromise.set_value();
         UDPMessage msg;
         memset (&msg, 0, sizeof(UDPMessage));
         if (SIREN_NET_FAILED == udpAgent.pollMessage(msg)) {
