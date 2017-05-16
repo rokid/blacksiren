@@ -64,14 +64,14 @@ include $(wildcard external/curl/Android.mk)
 LOCAL_PATH := $(CURRENT_PATH)
 endif
 
-#include $(CLEAR_VARS)
-#LOCAL_PREBUILT_LIBS := \
-#		libr2ssp:thirdparty/support/$(TARGET_ARCH)/libs/libr2ssp.so \
-#		libztvad:thirdparty/support/$(TARGET_ARCH)/libs/libztvad.so \
-#		libztcodec2:thirdparty/support/$(TARGET_ARCH)/libs/libztcodec2.so \
-#		libr2audio:thirdparty/support/$(TARGET_ARCH)/libs/legacy/libr2audio.so \
-#		libr2vt:thirdparty/support/$(TARGET_ARCH)/libs/legacy/libr2vt.so
-#include $(BUILD_MULTI_PREBUILT)
+include $(CLEAR_VARS)
+LOCAL_PREBUILT_LIBS := \
+		libr2ssp:thirdparty/support/$(TARGET_ARCH)/libs/libr2ssp.so \
+		libztvad:thirdparty/support/$(TARGET_ARCH)/libs/libztvad.so \
+		libztcodec2:thirdparty/support/$(TARGET_ARCH)/libs/libztcodec2.so \
+		libr2audio:thirdparty/support/$(TARGET_ARCH)/libs/legacy/libr2audio.so \
+		libr2vt:thirdparty/support/$(TARGET_ARCH)/libs/legacy/libr2vt.so
+include $(BUILD_MULTI_PREBUILT)
 
 THIRD_INCLUDES += \
 	$(LOCAL_PATH)/thirdparty/libjsonc/include \
