@@ -9,6 +9,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <vector>
+#include <atomic>
 
 #include "siren.h"
 #include "siren_config.h"
@@ -248,6 +249,8 @@ int SirenAudioVBVProcessor::process(PreprocessVoicePackage *voicePackage,
         }
 
         len = ppR2ad_msg_block[i]->iMsgDataLen;
+        //siren_printf(SIREN_INFO, "len=%d", len);
+        std::atomic_signal_fence(std::memory_order_seq_cst);
         prop = ppR2ad_msg_block[i]->iMsgId;
 
         if (len != 0 && hasSlInfo(prop)) {
