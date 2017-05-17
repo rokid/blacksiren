@@ -491,8 +491,13 @@ void SirenProxy::launchResponseThread() {
 }
 
 void SirenProxy::start_siren_process_stream(siren_proc_callback_t *callback) {
+    if (procStreamStart) {
+        siren_printf(SIREN_ERROR, "already start...");
+        return;
+    } else {
+        procStreamStart = true;
+    }
     proc_callback = callback;
-
     Message *req = allocateMessage(SIREN_REQUEST_MSG_START_PROCESS_STREAM, 0);
     requestQueue.push((void *)req);
     std::this_thread::sleep_for(std::chrono::microseconds(10));
@@ -504,6 +509,13 @@ void SirenProxy::start_siren_raw_stream(siren_raw_stream_callback_t *callback) {
 
 
 void SirenProxy::stop_siren_process_stream() {
+    if (!procStreamStart) {
+        siren_printf(SIREN_INFO, "already stop..");
+        return;
+    } else {
+        procStreamStart = false;
+    }
+
     Message *req = allocateMessage(SIREN_REQUEST_MSG_STOP_PROCESS_STREAM, 0);
     requestQueue.push((void *)req);
     std::this_thread::sleep_for(std::chrono::microseconds(10));
