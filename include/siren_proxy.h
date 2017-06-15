@@ -25,7 +25,7 @@ public:
     ~RecordingThread();
    
     bool init();
-    void start();
+    bool start();
     void stop();
     void pause();
 

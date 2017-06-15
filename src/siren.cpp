@@ -67,6 +67,7 @@ void start_siren_process_stream(siren_t siren, siren_proc_callback_t *callback) 
         return;
     }
 
+    siren_printf(BlackSiren::SIREN_INFO, "wtf!!!!!!");
     SirenProxy *proxy = (SirenProxy *)siren;
     proxy->start_siren_process_stream(callback);
 }

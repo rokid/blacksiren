@@ -15,7 +15,7 @@ typedef unsigned long siren_t;
 
 typedef int (*init_input_stream_t)(void *token);
 typedef void (*release_input_stream_t)(void *token);
-typedef void (*start_input_stream_t)(void *token);
+typedef int (*start_input_stream_t)(void *token);
 typedef void (*stop_input_stream_t)(void *token);
 typedef int (*read_input_stream_t)(void *token, char *buff, int len);
 typedef void (*on_err_input_stream_t)(void *token);

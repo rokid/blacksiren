@@ -86,13 +86,20 @@ bool RecordingThread::init() {
     return true;
 }
 
-void RecordingThread::start() {
+bool RecordingThread::start() {
     siren_printf(SIREN_INFO, "start recording thread");
+    if (0 != pSiren->input_callback->start_input(pSiren->token)) {
+        siren_printf(SIREN_INFO, "start recording thread failed");
+        return false;   
+    }
+    
     {
         std::unique_lock<decltype(startMutex)> lock(startMutex);
         recordingStart = true;
         startCond.notify_one();
     }
+    
+    return true;
 }
 
 void RecordingThread::pause() {
@@ -147,8 +154,9 @@ void RecordingThread::recordingFn() {
                     first = false;
                 }
 
+                
                 if (!recordingTerm) {
-                    pSiren->input_callback->start_input(pSiren->token);
+                //   pSiren->input_callback->start_input(pSiren->token);
                     inputStart = true;
                 }
             }
@@ -170,10 +178,13 @@ void RecordingThread::recordingFn() {
             if (currentRetry >= errorRetry) {
                 siren_printf(SIREN_INFO, "input error retry max");
                 pSiren->input_callback->on_err_input(pSiren->token);
+                currentRetry = 0;
+            } else {
+                currentRetry ++ ;
             }
-            pSiren->input_callback->stop_input(pSiren->token);
-            std::this_thread::sleep_for(std::chrono::microseconds(retryTimeout));
-            pSiren->input_callback->start_input(pSiren->token);
+            //pSiren->input_callback->stop_input(pSiren->token);
+            //std::this_thread::sleep_for(std::chrono::microseconds(retryTimeout));
+            //pSiren->input_callback->start_input(pSiren->token);
             continue;
         } else {
             currentRetry = 0;
@@ -495,13 +506,17 @@ void SirenProxy::start_siren_process_stream(siren_proc_callback_t *callback) {
         siren_printf(SIREN_ERROR, "already start...");
         return;
     } else {
+        proc_callback = callback;
+        if (!recordingThread->start()) {
+            proc_callback = nullptr;
+            siren_printf(SIREN_ERROR, "start failed...");
+            return;
+        }
+
         procStreamStart = true;
+        Message *req = allocateMessage(SIREN_REQUEST_MSG_START_PROCESS_STREAM, 0);
+        requestQueue.push((void *)req);
     }
-    proc_callback = callback;
-    Message *req = allocateMessage(SIREN_REQUEST_MSG_START_PROCESS_STREAM, 0);
-    requestQueue.push((void *)req);
-    std::this_thread::sleep_for(std::chrono::microseconds(10));
-    recordingThread->start();
 }
 void SirenProxy::start_siren_raw_stream(siren_raw_stream_callback_t *callback) {
 
@@ -518,7 +533,6 @@ void SirenProxy::stop_siren_process_stream() {
 
     Message *req = allocateMessage(SIREN_REQUEST_MSG_STOP_PROCESS_STREAM, 0);
     requestQueue.push((void *)req);
-    std::this_thread::sleep_for(std::chrono::microseconds(10));
     recordingThread->pause();
 }
 

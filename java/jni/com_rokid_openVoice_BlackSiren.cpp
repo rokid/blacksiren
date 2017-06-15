@@ -202,10 +202,10 @@ static void release_input_stream(void *thiz) {
     delete callbackTask;
 }
 
-static void start_input_stream(void *thiz) {
+static int start_input_stream(void *thiz) {
     if (queue == nullptr) {
         ALOGE("read input with queue null");
-        return;
+        return -1;
     }
 
     CallbackTask<int(JNIEnv *, void *)> *callbackTask = new CallbackTask<int(JNIEnv*, void *)>(
@@ -219,6 +219,7 @@ static void start_input_stream(void *thiz) {
     queue->push((void *)callbackTask);
     result.wait();
     delete callbackTask;
+    return 0;
 }
 
 static void stop_input_stream(void *thiz) {

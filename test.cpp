@@ -256,8 +256,9 @@ void release_input_stream(void *token) {
     siren_printf(BlackSiren::SIREN_INFO, "release input stream");
 }
 
-void start_input_stream(void *token) {
+int start_input_stream(void *token) {
     siren_printf(BlackSiren::SIREN_INFO, "start input stream");
+    return 0;
 }
 
 void stop_input_stream(void *token) {
@@ -374,6 +375,7 @@ void test_recording() {
 
     siren_printf(BlackSiren::SIREN_INFO, "start recording test");
     start_siren_process_stream(siren, &proc_callback);
+    siren_printf(BlackSiren::SIREN_INFO, "go test");
 
     for (;;) {
         std::this_thread::sleep_for(std::chrono::seconds(10));
@@ -402,17 +404,24 @@ int init_xmos_input_stream(void *token) {
         return -1;
     }
 
-    //recordingDebugStream.open("/data/test.pcm", std::ios::out | std::ios::binary);
+    recordingDebugStream.open("/data/test.pcm", std::ios::out | std::ios::binary);
     return 0;
 }
 
 void release_xmos_input_stream(void *token) {
 }
 
-void start_xmos_input_stream(void *token) {
+
+static bool test_twice_start = false;
+int start_xmos_input_stream(void *token) {
+    if (!test_twice_start) {
+        test_twice_start = true;
+        return -1;
+    }
     siren_printf(BlackSiren::SIREN_INFO, "start input stream");
     mic_array_device->start_stream(mic_array_device);
     siren_printf(BlackSiren::SIREN_INFO, "end of start input stream");
+    return 0;
 }
 
 void stop_xmos_input_stream(void *token) {
@@ -436,7 +445,7 @@ int read_xmos_input_stream(void *token,  char *buff, int len) {
     //buff[len/2 + 3] = 'd';
     //siren_printf(BlackSiren::SIREN_INFO, "before read stream");
     mic_array_device->read_stream(mic_array_device, buff, len);
-    //recordingDebugStream.write(buff, len);
+    recordingDebugStream.write(buff, len);
     //buff[len/2 + 4] = '\0';
     //std::cout<<buff + len/2<<std::endl;
     return 0;
@@ -475,20 +484,26 @@ void test_xmos() {
     }
     siren_printf(BlackSiren::SIREN_INFO, "start recording test");
     
-    start_siren_monitor(siren, &net_callback);
-    siren_printf(BlackSiren::SIREN_INFO, "start process");
+    //start_siren_monitor(siren, &net_callback);
+    siren_printf(BlackSiren::SIREN_INFO, "1111");
     start_siren_process_stream(siren, &proc_callback);
-
-#if 0
+    siren_printf(BlackSiren::SIREN_INFO, "go test");
+    
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+    set_siren_state(siren, SIREN_STATE_AWAKE, nullptr);
+#if 1
     std::thread t([&] {
         //std::this_thread::sleep_for(std::chrono::seconds(10));
         //siren_printf(BlackSiren::SIREN_INFO, "test set state awake sync");
         //set_siren_state(siren, SIREN_STATE_AWAKE, nullptr);
         //siren_printf(BlackSiren::SIREN_INFO, "now state is in wake");
-        std::this_thread::sleep_for(std::chrono::seconds(10));
-        siren_printf(BlackSiren::SIREN_INFO, "test set state sleep async");
-        set_siren_state(siren, SIREN_STATE_SLEEP, &state_changed_callback);
-        std::this_thread::sleep_for(std::chrono::seconds(100000));
+        //std::this_thread::sleep_for(std::chrono::seconds(10));
+        //siren_printf(BlackSiren::SIREN_INFO, "stop");
+        //stop_siren_process_stream(siren);
+        //set_siren_state(siren, SIREN_STATE_SLEEP, &state_changed_callback);
+        //std::this_thread::sleep_for(std::chrono::seconds(100000));
+        siren_printf(BlackSiren::SIREN_INFO, "test twice start");
+        start_siren_process_stream(siren, &proc_callback);
     });
 
     t.join();
@@ -517,7 +532,7 @@ void test_mic() {
     if (0 != mic_array_device->start_stream(mic_array_device)) {
         std::cout << "mic_array start stream failed" << std::endl;
     }
-    int frameSize = 8 * 4 * 480;//mic_array_device->get_stream_buff_size(mic_array_device);
+    int frameSize = 6 * 4 * 480;//mic_array_device->get_stream_buff_size(mic_array_device);
     siren_printf(BlackSiren::SIREN_INFO, "use frame cnt %d", frameSize);
     char *buff = new char[frameSize];
     for (;;) {
