@@ -56,35 +56,34 @@ siren_t init_siren(void *token, const char *path, siren_input_if_t *input) {
     }
 }
 
-void start_siren_process_stream(siren_t siren, siren_proc_callback_t *callback) {
+siren_t start_siren_process_stream(siren_t siren, siren_proc_callback_t *callback) {
     if (siren == 0) {
         siren_printf(BlackSiren::SIREN_ERROR, "siren is null");
-        return;
+        return SIREN_STATUS_ERROR;
     }
 
     if (callback == nullptr) {
         siren_printf(BlackSiren::SIREN_ERROR, "empty proc callback");
-        return;
+        return SIREN_STATUS_ERROR;
     }
 
-    siren_printf(BlackSiren::SIREN_INFO, "wtf!!!!!!");
     SirenProxy *proxy = (SirenProxy *)siren;
-    proxy->start_siren_process_stream(callback);
+    return proxy->start_siren_process_stream(callback);
 }
 
-void start_siren_raw_stream(siren_t siren, siren_raw_stream_callback_t *callback) {
+siren_t start_siren_raw_stream(siren_t siren, siren_raw_stream_callback_t *callback) {
     if (siren == 0) {
         siren_printf(BlackSiren::SIREN_ERROR, "siren is null");
-        return;
+        return SIREN_STATUS_ERROR;
     }
 
     if (callback == nullptr) {
         siren_printf(BlackSiren::SIREN_ERROR, "empty raw callback");
-        return;
+        return SIREN_STATUS_ERROR;
     }
 
     SirenProxy *proxy = (SirenProxy *)siren;
-    proxy->start_siren_raw_stream(callback);
+    return proxy->start_siren_raw_stream(callback);
 }
 
 void stop_siren_process_stream(siren_t siren) {
@@ -151,20 +150,37 @@ void destroy_siren(siren_t siren) {
     delete proxy;
 }
 
-siren_status_t rebuild_vt_word_list(siren_t siren, const char **vt_word_list, int num) {
+siren_vt_t add_vt_word(siren_t siren, siren_vt_word *word, bool use_default_config) {
     if (siren == 0) {
         siren_printf(BlackSiren::SIREN_ERROR, "siren is null");
-        return SIREN_STATUS_ERROR;
+        return -1;
     }
-    
-    if (vt_word_list == nullptr) {
-        siren_printf(BlackSiren::SIREN_ERROR, "vt word list is nulltpr");
-        return SIREN_STATUS_ERROR;
+
+    SirenProxy *proxy = (SirenProxy *)siren;
+    return proxy->add_vt_word(word, use_default_config);
+}
+
+siren_vt_t remove_vt_word(siren_t siren, const char *word) {
+    if (siren == 0) {
+        siren_printf(BlackSiren::SIREN_ERROR, "sire is null");
+        return -1;
+    }
+
+    SirenProxy *proxy = (SirenProxy *)siren;
+    return proxy->remove_vt_word(word);
+}
+
+int get_vt_word(siren_t siren, siren_vt_word **words) {
+    if (siren == 0) {
+        siren_printf(BlackSiren::SIREN_ERROR, "siren is null");
+        return -1;
     }
     
     SirenProxy *proxy = (SirenProxy *)siren;
-    return proxy->rebuild_vt_word_list(vt_word_list, num);
+    return proxy->get_vt_word(words);
 }
+
+
 
 void start_siren_monitor(siren_t siren, siren_net_callback_t *callback) {
     if (siren == 0) {

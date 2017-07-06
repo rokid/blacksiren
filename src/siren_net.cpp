@@ -18,7 +18,7 @@ siren_net_result SirenUDPAgent::prepareRecv() {
     bzero(&addrto, sizeof(struct sockaddr_in));
     addrto.sin_family = AF_INET;
     addrto.sin_addr.s_addr = htonl(INADDR_ANY);
-    addrto.sin_port = htons(CONFIG_MONITOR_UDP_PORT);
+    addrto.sin_port = htons(config->udp_port);
 
     recvSocket = -1;
     if ((recvSocket = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
@@ -34,7 +34,7 @@ siren_net_result SirenUDPAgent::prepareRecv() {
     bzero(&from, sizeof(struct sockaddr_in));
     from.sin_family = AF_INET;
     from.sin_addr.s_addr = htonl(INADDR_ANY);
-    from.sin_port = htons(CONFIG_MONITOR_UDP_PORT);
+    from.sin_port = htons(config->udp_port);
     return SIREN_NET_OK;
 }
 
@@ -56,7 +56,7 @@ siren_net_result SirenUDPAgent::prepareSend() {
     bzero(&addrto, sizeof(struct sockaddr_in));
     addrto.sin_family = AF_INET;
     addrto.sin_addr.s_addr = htonl(INADDR_BROADCAST);
-    addrto.sin_port = htons(CONFIG_MONITOR_UDP_PORT);
+    addrto.sin_port = htons(config->udp_port);
 
     return SIREN_NET_OK;
 }

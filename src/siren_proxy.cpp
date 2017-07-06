@@ -6,13 +6,15 @@
 #include <signal.h>
 
 #include <cstdio>
-#include <error.h>
+#include <errno.h>
 #include <string.h>
 #include <mutex>
 #include <condition_variable>
 #include <thread>
 #include <atomic>
 #include <functional>
+#include <vector>
+#include <iterator>
 
 #include "sutils.h"
 #include "siren.h"
@@ -90,15 +92,15 @@ bool RecordingThread::start() {
     siren_printf(SIREN_INFO, "start recording thread");
     if (0 != pSiren->input_callback->start_input(pSiren->token)) {
         siren_printf(SIREN_INFO, "start recording thread failed");
-        return false;   
+        return false;
     }
-    
+
     {
         std::unique_lock<decltype(startMutex)> lock(startMutex);
         recordingStart = true;
         startCond.notify_one();
     }
-    
+
     return true;
 }
 
@@ -154,9 +156,9 @@ void RecordingThread::recordingFn() {
                     first = false;
                 }
 
-                
+
                 if (!recordingTerm) {
-                //   pSiren->input_callback->start_input(pSiren->token);
+                    //   pSiren->input_callback->start_input(pSiren->token);
                     inputStart = true;
                 }
             }
@@ -208,7 +210,7 @@ siren_status_t SirenProxy::init_siren(void *token, const char *path, siren_input
         siren_printf(SIREN_ERROR, "alloc config manager failed");
         return SIREN_STATUS_ERROR;
     }
-    
+
     siren_status_t result = SIREN_STATUS_OK;
     result = global_config->parseConfigFile();
     SirenConfig& config = global_config->getConfigFile();
@@ -221,6 +223,7 @@ siren_status_t SirenProxy::init_siren(void *token, const char *path, siren_input
         //use socket
     }
 
+    udpAgent.setupConfig(&config);
     if (SIREN_NET_FAILED == udpAgent.prepareSend()) {
         siren_printf(SIREN_ERROR, "prepare send failed");
     }
@@ -275,6 +278,9 @@ siren_status_t SirenProxy::init_siren(void *token, const char *path, siren_input
         exit(0);
         //in parent
     } else {
+        //load phoneme list
+        phonemeGen.loadPhoneme();
+        
         launchRequestThread();
         launchResponseThread();
 
@@ -337,16 +343,16 @@ void SirenProxy::requestThreadHandler() {
             continue;
         }
 
-        siren_printf(SIREN_INFO, "proxy request thread read msg %d", req->msg);
+        //siren_printf(SIREN_INFO, "proxy request thread read msg %d", req->msg);
         if (req->msg == SIREN_REQUEST_MSG_DESTROY_ON_INIT) {
-            delete (char *)req;
+            delete [] (char *)req;
             return;
         }
 
         requestWriter.writeMessage(req);
-        siren_printf(SIREN_INFO, "proxy request thread write msg %d to siren", req->msg);
+        //siren_printf(SIREN_INFO, "proxy request thread write msg %d to siren", req->msg);
 
-        delete (char *)req;
+        delete [] (char *)req;
         if (req->msg == SIREN_REQUEST_MSG_DESTROY) {
             return;
         }
@@ -425,7 +431,7 @@ void SirenProxy::responseThreadHandler() {
                 sirenBaseInitFailed = true;
                 initCond.notify_one();
 
-                delete (char *)msg;
+                delete [] (char *)msg;
                 return;
             }
         }
@@ -433,7 +439,7 @@ void SirenProxy::responseThreadHandler() {
         case SIREN_RESPONSE_MSG_ON_STATE_CHANGED: {
         } break;
         case SIREN_RESPONSE_MSG_ON_VOICE_EVENT: {
-            siren_printf(SIREN_INFO, "on voice event");
+            //siren_printf(SIREN_INFO, "on voice event");
             ProcessedVoiceResult *pProcessedVoiceResult = (ProcessedVoiceResult *) msg->data;
             if (pProcessedVoiceResult != nullptr) {
                 int size = pProcessedVoiceResult->size;
@@ -443,11 +449,30 @@ void SirenProxy::responseThreadHandler() {
                     pData = (char *)pProcessedVoiceResult + sizeof(ProcessedVoiceResult);
                     pProcessedVoiceResult->data = pData;
                 }
-                proc_callback->voice_event_callback(token, size, (siren_event_t)pProcessedVoiceResult->prop,
-                                                    pData, pProcessedVoiceResult->hasSL, pProcessedVoiceResult->hasVoice,
-                                                    pProcessedVoiceResult->sl, pProcessedVoiceResult->energy,
-                                                    pProcessedVoiceResult->threshold, pProcessedVoiceResult->debug
-                                                   );
+            
+                voice_event_t *voice_event = new voice_event_t;
+                memset((char *)voice_event, 0, sizeof(voice_event_t));
+
+                voice_event->event = (siren_event_t)pProcessedVoiceResult->prop;
+                voice_event->length = pProcessedVoiceResult->size;
+                voice_event->background_energy = pProcessedVoiceResult->background_energy;
+                voice_event->background_threshold = pProcessedVoiceResult->background_threshold;
+
+                if (pProcessedVoiceResult->hasSL == 1) {
+                    voice_event->flag |= SL_MASK;
+                    voice_event->sl = pProcessedVoiceResult->sl;
+                } else if (pProcessedVoiceResult->hasVoice == 1) {
+                    voice_event->flag |= VOICE_MASK;    
+                    voice_event->buff = pProcessedVoiceResult->data;
+                } else if (pProcessedVoiceResult->hasVT == 1) {
+                    voice_event->flag |= VT_MASK;
+                    voice_event->vt.start = pProcessedVoiceResult->start;
+                    voice_event->vt.end = pProcessedVoiceResult->end;
+                    voice_event->vt.energy = pProcessedVoiceResult->vt_energy;
+                    voice_event->buff = pProcessedVoiceResult->data;
+                }
+                proc_callback->voice_event_callback(token, voice_event);
+                delete voice_event;
             } else {
                 siren_printf(SIREN_ERROR, "read voice result nullptr");
             }
@@ -482,7 +507,7 @@ void SirenProxy::responseThreadHandler() {
         }
         }
 
-        delete (char *)msg;
+        delete [] (char *)msg;
         if (destroy) {
             break;
         }
@@ -501,25 +526,26 @@ void SirenProxy::launchResponseThread() {
     responseThread = std::move(t);
 }
 
-void SirenProxy::start_siren_process_stream(siren_proc_callback_t *callback) {
+siren_status_t SirenProxy::start_siren_process_stream(siren_proc_callback_t *callback) {
     if (procStreamStart) {
         siren_printf(SIREN_ERROR, "already start...");
-        return;
+        return SIREN_STATUS_ERROR;
     } else {
         proc_callback = callback;
         if (!recordingThread->start()) {
             proc_callback = nullptr;
             siren_printf(SIREN_ERROR, "start failed...");
-            return;
+            return SIREN_STATUS_ERROR;
         }
 
         procStreamStart = true;
         Message *req = allocateMessage(SIREN_REQUEST_MSG_START_PROCESS_STREAM, 0);
         requestQueue.push((void *)req);
     }
+    return SIREN_STATUS_OK;
 }
-void SirenProxy::start_siren_raw_stream(siren_raw_stream_callback_t *callback) {
-
+siren_status_t SirenProxy::start_siren_raw_stream(siren_raw_stream_callback_t *callback) {
+    return SIREN_STATUS_ERROR;
 }
 
 
@@ -572,6 +598,136 @@ void SirenProxy::set_siren_steer(float ho, float var) {
     degrees[0] = ho;
     degrees[1] = var;
     requestQueue.push(req);
+}
+
+int SirenProxy::hasVTWord(const char *word, std::vector<siren_vt_word>::iterator &iterator) {
+    if (word == nullptr) {
+        return -1;
+    }
+
+    iterator = vt_words.begin();
+    for (size_t i = 0; iterator != vt_words.end(); ++iterator, i++) {
+        if (!strcmp(word, iterator->vt_word.c_str())) {
+            return i;
+        }
+    }
+
+    //don't have
+    return 0;
+}
+
+
+siren_vt_t SirenProxy::add_vt_word(siren_vt_word *word, bool use_default_settings) {
+    if (word == nullptr) {
+        siren_printf(SIREN_ERROR, "word is null!");
+        return SIREN_VT_ERROR;
+    }
+
+    if (word->vt_type != VT_TYPE_AWAKE &&
+            word->vt_type != VT_TYPE_SLEEP &&
+            word->vt_type != VT_TYPE_HOTWORD &&
+            word->vt_type != VT_TYPE_OTHER) {
+        siren_printf(SIREN_ERROR, "vt type illegal");
+        return SIREN_VT_ERROR;
+    }
+
+    if (word->vt_word.empty()) {
+        siren_printf(SIREN_ERROR, "vt word is empty!");
+        return SIREN_VT_ERROR;
+    }
+
+    if (word->vt_phone.empty()) {
+        siren_printf(SIREN_ERROR, "vt phone is empty!");
+    }
+
+    std::vector<siren_vt_word>::iterator it;
+
+    int has = hasVTWord(word->vt_word.c_str(), it);
+    if (has > 0) {
+        siren_printf(SIREN_ERROR, "already has that word!");
+        return SIREN_VT_DUP;
+    }
+
+    std::string pinyin;
+    if (!phonemeGen.pinyin2Phoneme(word->vt_phone.c_str(), pinyin)) {
+        siren_printf(SIREN_ERROR, "cannot gen phoneme for %s", word->vt_phone.c_str());
+        return SIREN_VT_ERROR;
+    }
+    siren_printf(SIREN_INFO, "use phoneme %s", pinyin.c_str());
+    word->vt_phone = pinyin;
+
+    if (use_default_settings) {
+        word->alg_config.vt_block_avg_score = 4.2f;
+        word->alg_config.vt_block_min_score = 2.7f;
+        word->alg_config.vt_left_sil_det = true;
+        word->alg_config.vt_right_sil_det = false;
+        word->alg_config.vt_remote_check_with_aec = false;
+        word->alg_config.vt_remote_check_without_aec = false;
+        word->alg_config.vt_local_classify_check = false;
+        word->alg_config.vt_classify_shield = -0.3;
+        word->alg_config.nnet_path = "";
+    }
+
+    vt_words.push_back(*word);
+    /* TODO
+    Message *req = allocateMessage(SIREN_REQUEST_MSG_SYNC_VT_WORD_LIST, sizeof(float) * 2);
+    requestQueue.push(req);
+    */
+
+    Message *req = allocateMessageFromVTWord(vt_words);
+    if (req == nullptr) {
+        siren_printf(SIREN_ERROR, "allocate sync vt word msg failed");
+        return SIREN_VT_ERROR;
+    }
+
+    requestQueue.push(req);
+
+    return SIREN_VT_OK;
+}
+
+siren_vt_t SirenProxy::remove_vt_word(const char *word) {
+    if (word == nullptr) {
+        siren_printf(SIREN_ERROR, "word is null");
+        return SIREN_VT_ERROR;
+    }
+
+    std::vector<siren_vt_word>::iterator it;
+    int index =  hasVTWord(word, it);
+    if (index == -1) {
+        siren_printf(SIREN_ERROR, "no such word: %s", word);
+        return SIREN_VT_DUP;
+    }
+
+    vt_words.erase(it);
+    Message *req = allocateMessageFromVTWord(vt_words);
+    if (req == nullptr) {
+        siren_printf(SIREN_ERROR, "allocate sync vt word msg failed");
+        return SIREN_VT_ERROR;
+    }
+
+    requestQueue.push(req);
+
+
+    return SIREN_VT_OK;
+}
+
+int SirenProxy::get_vt_word(siren_vt_word **words) {
+    if (words == nullptr) {
+        return -1;
+    }
+
+    if (stored_words != nullptr) {
+        delete []stored_words;
+    }
+
+    int size = vt_words.size();
+    stored_words = new siren_vt_word[size];
+    for (int i = 0; i < size; i++) {
+        stored_words[i] = vt_words[i];
+    }
+
+    *words = stored_words;
+    return size;
 }
 
 void SirenProxy::destroy_siren() {
@@ -633,9 +789,6 @@ void SirenProxy::launchMonitorThread() {
     udpRecvStartFuture.wait();
 }
 
-siren_status_t SirenProxy::rebuild_vt_word_list(const char **vt_word_list, int num) {
-    return SIREN_STATUS_OK;
-}
 
 void SirenProxy::start_siren_monitor(siren_net_callback_t *callback) {
     this->net_callback = callback;
@@ -646,7 +799,7 @@ void SirenProxy::start_siren_monitor(siren_net_callback_t *callback) {
     //start udp receiver thread
     launchMonitorThread();
     siren_printf(SIREN_INFO, "launch monitor thread done");
-        
+
 }
 
 siren_status_t SirenProxy::broadcast_siren_event(char *data, int len) {

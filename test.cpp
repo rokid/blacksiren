@@ -324,16 +324,51 @@ const char *eventToString(siren_event_t event) {
     }
 }
 
-void on_voice_event(void *token, int len, siren_event_t event,
-                    void *buff, int has_sl, int has_voice,
-                    double sl_degree, double energy, double threshold, int has_voice_print) {
-    siren_printf(BlackSiren::SIREN_INFO,
-                 "rcv event %s with len %d, has_sl %d, has_voice %d, energy %f, threshold %f",
-                 eventToString(event), len, has_sl, has_voice, energy, threshold);
-    if (has_sl == 1) {
-        siren_printf(BlackSiren::SIREN_INFO, "sl degree %f", sl_degree);
-    }
+static int dump_id = 0;
+static int len_start = 0;
+static int len_end = 0;
+static bool vt_flag = false;
+void debug_voice_event(voice_event_t *event) {
+    if (HAS_VT(event->flag)) {
+        siren_printf(BlackSiren::SIREN_INFO,
+                "vt with %s [%d,%d]@%f", event->buff, 
+                event->vt.start, event->vt.end, event->vt.energy);
+        vt_flag = true;
+        len_start = event->vt.start;
+        len_end = event->vt.end;
+    } else if (HAS_SL(event->flag)) {
+        siren_printf(BlackSiren::SIREN_INFO,
+                "sl with %f", event->sl); 
+    } else if (HAS_VOICE(event->flag)) {
+        if (vt_flag && event->event == SIREN_EVENT_VAD_DATA) {
+            vt_flag = false;
+            std::fstream output;
+            char path[256];
+            sprintf(path, "/data/dump%d.pcm", dump_id);
+            dump_id++;
+            output.open(path, std::ios::out|std::ios::binary);
+            char *p = (char *)event->buff;
+            p += len_start * 4;
+            int len = len_end - len_start;
+            len *= 4;
+            siren_printf(BlackSiren::SIREN_INFO, "dump offset %d and len %d", len_start, len);
+            output.write(p, len);
+            output.flush();
+            output.close();
 
+            len_start = 0;
+            len_end = 0;
+        }
+    }
+}
+
+void on_voice_event(void *token, voice_event_t *event) {
+    if (event != nullptr) {
+        debug_voice_event(event);
+    } else {
+        siren_printf(BlackSiren::SIREN_ERROR, "on voice event with nullptr");
+        return;
+    }
 }
 
 void test_init() {
@@ -414,10 +449,10 @@ void release_xmos_input_stream(void *token) {
 
 static bool test_twice_start = false;
 int start_xmos_input_stream(void *token) {
-    if (!test_twice_start) {
-        test_twice_start = true;
-        return -1;
-    }
+    //if (!test_twice_start) {
+    //    test_twice_start = true;
+    //    return -1;
+    //}
     siren_printf(BlackSiren::SIREN_INFO, "start input stream");
     mic_array_device->start_stream(mic_array_device);
     siren_printf(BlackSiren::SIREN_INFO, "end of start input stream");
@@ -483,15 +518,15 @@ void test_xmos() {
         return;
     }
     siren_printf(BlackSiren::SIREN_INFO, "start recording test");
-    
+
     //start_siren_monitor(siren, &net_callback);
     siren_printf(BlackSiren::SIREN_INFO, "1111");
     start_siren_process_stream(siren, &proc_callback);
     siren_printf(BlackSiren::SIREN_INFO, "go test");
-    
-    std::this_thread::sleep_for(std::chrono::seconds(5));
-    set_siren_state(siren, SIREN_STATE_AWAKE, nullptr);
-#if 1
+
+    //std::this_thread::sleep_for(std::chrono::seconds(5));
+    //set_siren_state(siren, SIREN_STATE_AWAKE, nullptr);
+#if 0
     std::thread t([&] {
         //std::this_thread::sleep_for(std::chrono::seconds(10));
         //siren_printf(BlackSiren::SIREN_INFO, "test set state awake sync");
@@ -576,7 +611,7 @@ void test_download() {
         } else {
             siren_printf(BlackSiren::SIREN_INFO, "address is %s", ip.c_str());
         }
-        
+
         curl_easy_setopt(curl, CURLOPT_URL, "https://config.open.rokid.com/openconfig/blacksiren.json");
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)f);
@@ -592,7 +627,7 @@ void test_download() {
         siren_printf(BlackSiren::SIREN_ERROR, "init curl failed");
         return;
     }
-    
+
     curl_global_cleanup();
 }
 
@@ -626,6 +661,103 @@ void test_send() {
     }
 }
 
+void dump_vt_word(siren_vt_word &vt_word) {
+    siren_printf(BlackSiren::SIREN_INFO, "word=%s,phone=%s", vt_word.vt_word.c_str(), vt_word.vt_phone.c_str());
+}
+
+void test_vt() {
+    siren_input_if_t input_callback;
+    input_callback.init_input = init_input_stream;
+    input_callback.release_input = release_input_stream;
+    input_callback.start_input = start_input_stream;
+    input_callback.stop_input = stop_input_stream;
+    input_callback.on_err_input = on_err_input_stream;
+    input_callback.read_input = read_input_stream;
+
+    siren_proc_callback_t proc_callback;
+    proc_callback.voice_event_callback = on_voice_event;
+    siren = init_siren(nullptr, "blacksiren.json", &input_callback);
+    if (siren == 0) {
+        siren_printf(BlackSiren::SIREN_INFO, "init siren failed");
+        return;
+    }
+
+    start_siren_process_stream(siren, &proc_callback);
+    
+    siren_vt_word vt1, vt2, vt3;
+    vt1.vt_phone = "ni2hao3";
+    vt1.vt_type = VT_TYPE_AWAKE;
+    vt1.use_default_config = true;
+    vt1.vt_word = "你好";
+
+    vt2.vt_phone = "sha3bi1";
+    vt2.vt_type = VT_TYPE_HOTWORD;
+    vt2.use_default_config = false;
+    vt2.vt_word = "傻逼";
+    vt2.alg_config.vt_block_avg_score = 1.0f;
+    vt2.alg_config.vt_classify_shield = 1.1f;
+    vt2.alg_config.vt_block_min_score = 2.0f;
+    vt2.alg_config.vt_left_sil_det = false;
+    vt2.alg_config.vt_right_sil_det = false;
+    vt2.alg_config.vt_remote_check_with_aec = false;
+    vt2.alg_config.vt_remote_check_without_aec = false;
+    vt2.alg_config.vt_local_classify_check = false;
+    vt2.alg_config.nnet_path = "/system/etc/hello";
+
+    vt3.vt_phone = "hao3ren2";
+    vt3.vt_type = VT_TYPE_SLEEP;
+    vt3.use_default_config = true;
+    vt3.vt_word = "好人";
+
+    siren_vt_t result = add_vt_word(siren, &vt1, true);
+    siren_printf(BlackSiren::SIREN_INFO, "add %s with result %d", vt1.vt_word.c_str(), result);
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+
+    result = add_vt_word(siren, &vt2, true);
+    siren_printf(BlackSiren::SIREN_INFO, "add %s with result %d", vt2.vt_word.c_str(), result);
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+#if 0
+    //test get
+    siren_vt_word *words = nullptr;
+    int num = get_vt_word(siren, &words);
+    if (num > 0) {
+        for (int i = 0; i < num; i++) {
+            dump_vt_word(words[i]);
+        }
+    }
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+    siren_printf(BlackSiren::SIREN_INFO, "after add...");
+#endif
+    result = add_vt_word(siren, &vt3, true);
+    siren_printf(BlackSiren::SIREN_INFO, "add %s with result %d", vt3.vt_word.c_str(), result);
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+#if 0
+    num = get_vt_word(siren, &words);
+    if (num > 0) {
+        for (int i = 0; i < num; i++) {
+            dump_vt_word(words[i]);
+        }
+    }
+#endif
+    siren_printf(BlackSiren::SIREN_INFO, "after remove...");
+    result = remove_vt_word(siren, vt3.vt_word.c_str());
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+#if 1
+    siren_vt_word *words = nullptr;
+    int num = get_vt_word(siren, &words);
+    if (num > 0) {
+        for (int i = 0; i < num; i++) {
+            dump_vt_word(words[i]);
+        }
+    }
+#endif
+    //destroy_siren(siren);
+    for (;;) {
+        std::this_thread::sleep_for(std::chrono::seconds(1000));
+    }
+}
+
+
 int main(void) {
     //test_common();
     //test_channel();
@@ -640,4 +772,6 @@ int main(void) {
     //test_download();
 
     //test_send();
+
+    //test_vt();
 }

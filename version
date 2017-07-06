@@ -1,0 +1,10 @@
+r2slv4 changeid I06c0402a9342a8112c3f80bf6caa67afeeae3d9f 
+
+
+TODO:
+
+
+1. modify start/stop (mic may ready after a while, trigger callback's start
+when call start)
+2. load config from memory
+3. add vt words interface

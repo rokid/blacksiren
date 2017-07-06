@@ -8,6 +8,8 @@
 #include <unistd.h>
 #include <mutex>
 #include <condition_variable>
+#include <vector>
+#include <iterator>
 
 #include "siren_config.h"
 #include "siren_channel.h"
@@ -15,6 +17,7 @@
 #include "isiren.h"
 #include "sutils.h"
 #include "lfqueue.h"
+#include "siren_alg.h"
 
 namespace BlackSiren {
 
@@ -97,8 +100,8 @@ public:
     virtual ~SirenProxy() {}
 
     virtual siren_status_t init_siren(void *token, const char *path, siren_input_if_t *input) override;
-    virtual void start_siren_process_stream(siren_proc_callback_t *callback) override;
-    virtual void start_siren_raw_stream(siren_raw_stream_callback_t *callback) override;
+    virtual siren_status_t start_siren_process_stream(siren_proc_callback_t *callback) override;
+    virtual siren_status_t start_siren_raw_stream(siren_raw_stream_callback_t *callback) override;
     virtual void stop_siren_process_stream() override;
     virtual void stop_siren_raw_stream() override;
     virtual void stop_siren_stream() override;
@@ -106,11 +109,15 @@ public:
     virtual void set_siren_state(siren_state_t state, siren_state_changed_callback_t *callback) override;
     virtual void set_siren_steer(float ho, float var) override;
     virtual void destroy_siren() override;
-    virtual siren_status_t rebuild_vt_word_list(const char **vt_word_list, int num) override;
 
     virtual bool get_thread_key() override {
         return allocated_from_thread;
     }
+
+    siren_vt_t add_vt_word(siren_vt_word *word, bool use_default_settings);
+    siren_vt_t remove_vt_word(const char *word);
+
+    int get_vt_word(siren_vt_word **words);
 
     void clearThread() {
         if (recordingThread != nullptr) {
@@ -131,6 +138,7 @@ public:
 private:
     std::function<void(void*, int)> stateChangeCallback; 
     void *token;
+    int hasVTWord(const char  *word, std::vector<siren_vt_word>::iterator &);
     
     friend class RecordingThread;
     void launchRequestThread();
@@ -186,6 +194,10 @@ private:
     std::thread monitorThread;
     SirenUDPAgent udpAgent;
 
+    //vt
+    std::vector<siren_vt_word> vt_words;
+    siren_vt_word *stored_words = nullptr;
+    SirenPhonemeGen phonemeGen;
 };
 
 
