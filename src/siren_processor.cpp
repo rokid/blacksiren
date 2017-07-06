@@ -477,7 +477,7 @@ void SirenProcessorImpl::process(char *datain, int lenin, int aecflag, int awake
 
     //siren_printf(SIREN_INFO, "vad2 process");
     int vad2 = unit.m_pMem_vad2->process(data_sig, len_sig, 0,
-                                         aecflag, forceStart, data_sig, len_sig);
+                                         0, forceStart, data_sig, len_sig);
 
     if (vad2 & r2vad_audio_begin) {
         siren_printf(SIREN_INFO, "vad audio begin");

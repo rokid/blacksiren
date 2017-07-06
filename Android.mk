@@ -34,8 +34,8 @@ LOCAL_PREBUILT_LIBS := \
 		libr2audio:thirdparty/support/$(TARGET_ARCH)/libs/legacy/libr2audio.so \
 		libr2ssp:thirdparty/support/$(TARGET_ARCH)/libs/libr2ssp.so \
 		libztvad:thirdparty/support/$(TARGET_ARCH)/libs/libztvad.so \
-		libztcodec2:thirdparty/support/$(TARGET_ARCH)/libs/libztcodec2.so \
-		libr2vt:thirdparty/support/$(TARGET_ARCH)/libs/legacy/libr2vt.so
+		libr2vt:thirdparty/support/$(TARGET_ARCH)/libs/legacy/libr2vt.so \
+		libopus:thirdparty/support/$(TARGET_ARCH)/libs/libopus.a
 include $(BUILD_MULTI_PREBUILT)
 
 THIRD_INCLUDES += \
@@ -63,8 +63,8 @@ endif
 
 LOCAL_CFLAGS:= $(L_CFLAGS) -Wall -Wextra -std=gnu++11
 LOCAL_MODULE:= libbsiren
-LOCAL_SHARED_LIBRARIES += liblog libr2ssp libztvad libztcodec2 libr2vt libcurl 
-LOCAL_STATIC_LIBRARIES += libjsonc_static
+LOCAL_SHARED_LIBRARIES += liblog libr2ssp libztvad libr2vt libcurl 
+LOCAL_STATIC_LIBRARIES += libjsonc_static libopus
 
 ifdef CONFIG_USE_AD1 
 $(info use ad1)
