@@ -105,6 +105,7 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
     json_object *alg_vad_dynrange_max_object = nullptr;
 
     json_object *alg_need_i2s_delay_mics_object = nullptr;
+    json_object *alg_i2s_delay_mics_object = nullptr;
     json_object *alg_mic_pos_object = nullptr;
     json_object *alg_sl_mics_object = nullptr;
     json_object *alg_bf_mics_object = nullptr;
@@ -156,15 +157,15 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
 
     if (TRUE != json_object_object_get_ex(config_object, KEY_ALG_CONFIG, &alg_config)) {
         siren_printf(SIREN_ERROR, "cannot find alg config");
-        json_object_put(basic_config);
+//        json_object_put(basic_config);
         json_object_put(config_object);
         return CONFIG_ERROR_PARSE_FAIL;
     }
 
     if (TRUE != json_object_object_get_ex(config_object, KEY_DEBUG_CONFIG, &debug_config)) {
         siren_printf(SIREN_ERROR, "cannot find debug config");
-        json_object_put(basic_config);
-        json_object_put(alg_config);
+//        json_object_put(basic_config);
+//        json_object_put(alg_config);
         json_object_put(config_object);
         return CONFIG_ERROR_PARSE_FAIL;
     }
@@ -175,10 +176,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(mic_num_object)) == json_type_int) {
             siren_config.mic_num = json_object_get_int(mic_num_object);
             siren_printf(SIREN_INFO, "set mic num to %d", siren_config.mic_num);
-            json_object_put(mic_num_object);
+//            json_object_put(mic_num_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type int with key %s", KEY_MIC_NUM);
-            json_object_put(mic_num_object);
+//            json_object_put(mic_num_object);
             goto fail;
         }
     } else {
@@ -191,10 +192,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(mic_channel_num_object)) == json_type_int) {
             siren_config.mic_channel_num = json_object_get_int(mic_channel_num_object);
             siren_printf(SIREN_INFO, "set mic channel num to %d", siren_config.mic_channel_num);
-            json_object_put(mic_channel_num_object);
+//            json_object_put(mic_channel_num_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type int with key %s", KEY_MIC_CHANNEL_NUM);
-            json_object_put(mic_channel_num_object);
+//            json_object_put(mic_channel_num_object);
             goto fail;
         }
     } else {
@@ -206,10 +207,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(mic_sample_rate_object)) == json_type_int) {
             siren_config.mic_sample_rate = json_object_get_int(mic_sample_rate_object);
             siren_printf(SIREN_INFO, "set mic sample rate to %d", siren_config.mic_sample_rate);
-            json_object_put(mic_sample_rate_object);
+//            json_object_put(mic_sample_rate_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type int with key %s", KEY_MIC_SAMPLE_RATE);
-            json_object_put(mic_sample_rate_object);
+//            json_object_put(mic_sample_rate_object);
             goto fail;
         }
     } else {
@@ -221,10 +222,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(mic_audio_byte_object)) == json_type_int) {
             siren_config.mic_audio_byte = json_object_get_int(mic_audio_byte_object);
             siren_printf(SIREN_INFO, "set mic audio byte to %d", siren_config.mic_audio_byte);
-            json_object_put(mic_audio_byte_object);
+//            json_object_put(mic_audio_byte_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type int with key %s", KEY_MIC_AUDIO_BYTE);
-            json_object_put(mic_audio_byte_object);
+//            json_object_put(mic_audio_byte_object);
             goto fail;
         }
     } else {
@@ -236,10 +237,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(mic_frame_length_object)) == json_type_int) {
             siren_config.mic_frame_length = json_object_get_int(mic_frame_length_object);
             siren_printf(SIREN_INFO, "set mic frame length to %d", siren_config.mic_frame_length);
-            json_object_put(mic_frame_length_object);
+//            json_object_put(mic_frame_length_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type int with key %s", KEY_MIC_FRAME_LENGTH);
-            json_object_put(mic_frame_length_object);
+//            json_object_put(mic_frame_length_object);
             goto fail;
         }
     } else {
@@ -256,10 +257,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
             } else {
                 siren_config.siren_use_share_mem = true;
             }
-            json_object_put(siren_ipc_object);
+            //    json_object_put(siren_ipc_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type int with key %s", KEY_SIREN_IPC);
-            json_object_put(siren_ipc_object);
+            //      json_object_put(siren_ipc_object);
             goto fail;
         }
     } else {
@@ -271,10 +272,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(siren_channel_rmem_object)) == json_type_int) {
             siren_config.siren_recording_socket_rmem = static_cast<unsigned long>(json_object_get_int64(siren_channel_rmem_object));
             siren_printf(SIREN_INFO, "set channel rmem to %ld", siren_config.siren_recording_socket_rmem);
-            json_object_put(siren_channel_rmem_object);
+            //        json_object_put(siren_channel_rmem_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type int with key %s", KEY_SIREN_CHANNEL_RMEM);
-            json_object_put(siren_channel_rmem_object);
+            //          json_object_put(siren_channel_rmem_object);
             goto fail;
         }
     } else {
@@ -286,10 +287,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(siren_channel_wmem_object)) == json_type_int) {
             siren_config.siren_recording_socket_wmem = static_cast<unsigned long>(json_object_get_int64(siren_channel_wmem_object));
             siren_printf(SIREN_INFO, "set channel wmem to %ld", siren_config.siren_recording_socket_wmem);
-            json_object_put(siren_channel_rmem_object);
+//            json_object_put(siren_channel_rmem_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type int with key %s", KEY_SIREN_CHANNEL_WMEM);
-            json_object_put(siren_channel_rmem_object);
+            //   json_object_put(siren_channel_rmem_object);
             goto fail;
         }
     } else {
@@ -301,10 +302,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(siren_input_err_retry_num_object)) == json_type_int) {
             siren_config.siren_input_err_retry_num = json_object_get_int(siren_input_err_retry_num_object);
             siren_printf(SIREN_INFO, "set input retry num to %d", siren_config.siren_input_err_retry_num);
-            json_object_put(siren_input_err_retry_num_object);
+            //     json_object_put(siren_input_err_retry_num_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type int with key %s", KEY_SIREN_INPUT_ERR_RETRY_NUM);
-            json_object_put(siren_input_err_retry_num_object);
+            //       json_object_put(siren_input_err_retry_num_object);
             goto fail;
         }
     } else {
@@ -316,10 +317,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(siren_input_err_retry_timeout_object)) == json_type_int) {
             siren_config.siren_input_err_retry_timeout = json_object_get_int(siren_input_err_retry_timeout_object);
             siren_printf(SIREN_INFO, "set input retry timeout to %d", siren_config.siren_input_err_retry_timeout);
-            json_object_put(siren_input_err_retry_timeout_object);
+            //         json_object_put(siren_input_err_retry_timeout_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type int with key %s", KEY_SIREN_INPUT_ERR_RETRY_TIMEOUT);
-            json_object_put(siren_input_err_retry_timeout_object);
+//           json_object_put(siren_input_err_retry_timeout_object);
             goto fail;
         }
     } else {
@@ -331,10 +332,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(siren_monitor_udp_port_object)) == json_type_int) {
             siren_config.udp_port = json_object_get_int(siren_monitor_udp_port_object);
             siren_printf(SIREN_INFO, "set monitor udp port to %d", siren_config.udp_port);
-            json_object_put(siren_monitor_udp_port_object);
+            //          json_object_put(siren_monitor_udp_port_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type int with key %s", KEY_SIREN_MONITOR_UDP_PORT);
-            json_object_put(siren_monitor_udp_port_object);
+            //          json_object_put(siren_monitor_udp_port_object);
             goto fail;
         }
     } else {
@@ -355,10 +356,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
                 siren_config.alg_config.alg_use_legacy_vt_config_file = false;
             }
 
-            json_object_put(alg_use_legacy_config_file_object);
+            //          json_object_put(alg_use_legacy_config_file_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type boolean with key %s", KEY_ALG_USE_LEGACY_CONFIG_FILE);
-            json_object_put(alg_use_legacy_config_file_object);
+            //          json_object_put(alg_use_legacy_config_file_object);
             goto fail;
         }
     } else {
@@ -371,10 +372,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
             const char *legacy_file_path = json_object_get_string(alg_legacy_config_file_path_object);
             siren_printf(SIREN_INFO, "legacy file path set to %s", legacy_file_path);
             siren_config.alg_config.alg_legacy_dir = legacy_file_path;
-            json_object_put(alg_legacy_config_file_path_object);
+            //          json_object_put(alg_legacy_config_file_path_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type string with key %s", KEY_ALG_LEGACY_CONFIG_FILE_PATH);
-            json_object_put(alg_legacy_config_file_path_object);
+            //          json_object_put(alg_legacy_config_file_path_object);
             goto fail;
         }
     } else {
@@ -394,10 +395,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
                     siren_config.alg_config.alg_lan = 0;
                 }
             }
-            json_object_put(alg_lan_object);
+//           json_object_put(alg_lan_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type string with key %s", KEY_ALG_LAN);
-            json_object_put(alg_lan_object);
+//           json_object_put(alg_lan_object);
             goto fail;
         }
     } else {
@@ -415,15 +416,15 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
                         int rs_idx = json_object_get_int(json_idx);
                         siren_config.alg_config.alg_rs_mics.push_back(rs_idx);
                     }
-                    json_object_put(json_idx);
+                    //                  json_object_put(json_idx);
                 }
 
                 siren_printf(SIREN_INFO, "rs mics: %s", build_printable_indx(siren_config.alg_config.alg_rs_mics).c_str());
             }
-            json_object_put(alg_rs_mics_object);
+//            json_object_put(alg_rs_mics_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type array with key %s", KEY_ALG_RS_MICS);
-            json_object_put(alg_rs_mics_object);
+//            json_object_put(alg_rs_mics_object);
             goto fail;
         }
     } else {
@@ -435,10 +436,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(alg_aec_object)) == json_type_boolean) {
             siren_config.alg_config.alg_aec = json_object_get_boolean(alg_aec_object);
             siren_printf(SIREN_INFO, "enable aec %d", siren_config.alg_config.alg_aec);
-            json_object_put(alg_aec_object);
+//            json_object_put(alg_aec_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type boolean with key %s", KEY_ALG_AEC);
-            json_object_put(alg_aec_object);
+//           json_object_put(alg_aec_object);
             goto fail;
         }
     } else {
@@ -456,16 +457,16 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
                         int aec_idx = json_object_get_int(json_idx);
                         siren_config.alg_config.alg_aec_mics.push_back(aec_idx);
                     }
-                    json_object_put(json_idx);
+//                   json_object_put(json_idx);
                 }
             }
 
             siren_printf(SIREN_INFO, "aec mics: %s",
                          build_printable_indx(siren_config.alg_config.alg_aec_mics).c_str());
-            json_object_put(alg_aec_mics_object);
+//           json_object_put(alg_aec_mics_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type int with key %s", KEY_ALG_AEC_MICS);
-            json_object_put(alg_aec_mics_object);
+//           json_object_put(alg_aec_mics_object);
             goto fail;
         }
     } else {
@@ -483,16 +484,16 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
                         int aec_ref_idx = json_object_get_int(json_idx);
                         siren_config.alg_config.alg_aec_ref_mics.push_back(aec_ref_idx);
                     }
-                    json_object_put(json_idx);
+                    //                 json_object_put(json_idx);
                 }
             }
 
             siren_printf(SIREN_INFO, "aec ref mics: %s",
                          build_printable_indx(siren_config.alg_config.alg_aec_ref_mics).c_str());
-            json_object_put(alg_aec_mics_object);
+            //         json_object_put(alg_aec_mics_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type array with key %s", KEY_ALG_AEC_REF_MICS);
-            json_object_put(alg_aec_mics_object);
+            //         json_object_put(alg_aec_mics_object);
             goto fail;
         }
     } else {
@@ -504,10 +505,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(alg_aec_shield_object)) == json_type_double) {
             siren_config.alg_config.alg_aec_shield = static_cast<float>(json_object_get_double(alg_aec_shield_object));
             siren_printf(SIREN_INFO, "set aec shield to %f", siren_config.alg_config.alg_aec_shield);
-            json_object_put(alg_aec_shield_object);
+//           json_object_put(alg_aec_shield_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type double with key %s", KEY_ALG_AEC_SHIELD);
-            json_object_put(alg_aec_shield_object);
+//           json_object_put(alg_aec_shield_object);
             goto fail;
         }
     } else {
@@ -525,16 +526,16 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
                         int cpu_aff_idx = json_object_get_int(json_idx);
                         siren_config.alg_config.alg_aec_aff_cpus.push_back(cpu_aff_idx);
                     }
-                    json_object_put(json_idx);
+                    //                  json_object_put(json_idx);
                 }
             }
 
             siren_printf(SIREN_INFO, "aec aff cpus: %s",
                          build_printable_indx(siren_config.alg_config.alg_aec_aff_cpus).c_str());
-            json_object_put(alg_aec_aff_cpus_object);
+//            json_object_put(alg_aec_aff_cpus_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type array with key %s", KEY_ALG_AEC_AFF_CPUS);
-            json_object_put(alg_aec_aff_cpus_object);
+            //          json_object_put(alg_aec_aff_cpus_object);
             goto fail;
         }
     } else {
@@ -552,16 +553,16 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
                         int cpu_mat_aff_idx = json_object_get_int(json_idx);
                         siren_config.alg_config.alg_aec_mat_aff_cpus.push_back(cpu_mat_aff_idx);
                     }
-                    json_object_put(json_idx);
+//                    json_object_put(json_idx);
                 }
             }
 
             siren_printf(SIREN_INFO, "aec mat aff cpus: %s",
                          build_printable_indx(siren_config.alg_config.alg_aec_mat_aff_cpus).c_str());
-            json_object_put(alg_aec_mat_aff_cpus_object);
+//            json_object_put(alg_aec_mat_aff_cpus_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type array with key %s", KEY_ALG_AEC_MAT_AFF_CPUS);
-            json_object_put(alg_aec_mat_aff_cpus_object);
+//            json_object_put(alg_aec_mat_aff_cpus_object);
             goto fail;
         }
     } else {
@@ -574,10 +575,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(alg_raw_stream_sl_direction_object)) == json_type_double) {
             siren_config.alg_config.alg_raw_stream_sl_direction = static_cast<float>(json_object_get_double(alg_raw_stream_sl_direction_object));
             siren_printf(SIREN_INFO, "set raw stream sl direction to %f", siren_config.alg_config.alg_raw_stream_sl_direction);
-            json_object_put(alg_raw_stream_sl_direction_object);
+//            json_object_put(alg_raw_stream_sl_direction_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type double with key %s", KEY_ALG_RAW_STREAM_SL_DIRECTION);
-            json_object_put(alg_raw_stream_sl_direction_object);
+//            json_object_put(alg_raw_stream_sl_direction_object);
             goto fail;
         }
     } else {
@@ -589,10 +590,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(alg_raw_stream_bf_object)) == json_type_boolean) {
             siren_config.alg_config.alg_raw_stream_bf = json_object_get_boolean(alg_raw_stream_bf_object);
             siren_printf(SIREN_INFO, "enable raw stream bf %d", siren_config.alg_config.alg_raw_stream_bf);
-            json_object_put(alg_raw_stream_bf_object);
+//            json_object_put(alg_raw_stream_bf_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type boolean with key %s", KEY_ALG_RAW_STREAM_BF);
-            json_object_put(alg_raw_stream_bf_object);
+//            json_object_put(alg_raw_stream_bf_object);
             goto fail;
         }
     } else {
@@ -604,10 +605,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(alg_raw_stream_agc_object)) == json_type_boolean) {
             siren_config.alg_config.alg_raw_stream_agc = json_object_get_boolean(alg_raw_stream_agc_object);
             siren_printf(SIREN_INFO, "enable raw stream agc %d", siren_config.alg_config.alg_raw_stream_bf);
-            json_object_put(alg_raw_stream_agc_object);
+//            json_object_put(alg_raw_stream_agc_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type boolean with key %s", KEY_ALG_RAW_STREAM_AGC);
-            json_object_put(alg_raw_stream_agc_object);
+//            json_object_put(alg_raw_stream_agc_object);
             goto fail;
         }
     } else {
@@ -619,10 +620,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(alg_vt_enable_object)) == json_type_boolean) {
             siren_config.alg_config.alg_vt_enable = json_object_get_boolean(alg_vt_enable_object);
             siren_printf(SIREN_INFO, "enable vt %d", siren_config.alg_config.alg_vt_enable);
-            json_object_put(alg_vt_enable_object);
+//            json_object_put(alg_vt_enable_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type boolean with key %s", KEY_ALG_VT_ENABLE);
-            json_object_put(alg_vt_enable_object);
+//            json_object_put(alg_vt_enable_object);
             goto fail;
         }
     } else {
@@ -634,10 +635,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(alg_vad_enable_object)) == json_type_boolean) {
             siren_config.alg_config.alg_vad_enable = json_object_get_boolean(alg_vad_enable_object);
             siren_printf(SIREN_INFO, "enable vad %d", siren_config.alg_config.alg_vad_enable);
-            json_object_put(alg_vad_enable_object);
+//            json_object_put(alg_vad_enable_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type boolean with key %s", KEY_ALG_VAD_ENABLE);
-            json_object_put(alg_vad_enable_object);
+//            json_object_put(alg_vad_enable_object);
             goto fail;
         }
     } else {
@@ -655,16 +656,16 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
                         int vad_mic_idx = json_object_get_int(json_idx);
                         siren_config.alg_config.alg_vad_mics.push_back(vad_mic_idx);
                     }
-                    json_object_put(json_idx);
+//                    json_object_put(json_idx);
                 }
             }
 
             siren_printf(SIREN_INFO, "vad mics: %s",
                          build_printable_indx(siren_config.alg_config.alg_vad_mics).c_str());
-            json_object_put(alg_vad_mics_object);
+//            json_object_put(alg_vad_mics_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type array with key %s", KEY_ALG_VAD_MICS);
-            json_object_put(alg_vad_mics_object);
+//            json_object_put(alg_vad_mics_object);
             goto fail;
         }
     } else {
@@ -676,10 +677,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(alg_vad_baserange_object)) == json_type_double) {
             siren_config.alg_config.alg_vad_baserange = json_object_get_double(alg_vad_baserange_object);
             siren_printf(SIREN_INFO, "vad baserange: %f", siren_config.alg_config.alg_vad_baserange);
-            json_object_put(alg_vad_baserange_object);
+//            json_object_put(alg_vad_baserange_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type float/double with key %s", KEY_ALG_VAD_BASERANGE);
-            json_object_put(alg_vad_baserange_object);
+//            json_object_put(alg_vad_baserange_object);
             goto fail;
         }
     } else {
@@ -691,10 +692,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(alg_vad_dynrange_min_object)) == json_type_double) {
             siren_config.alg_config.alg_vad_dynrange_min = json_object_get_double(alg_vad_dynrange_min_object);
             siren_printf(SIREN_INFO, "vad dynrange min: %f", siren_config.alg_config.alg_vad_dynrange_min);
-            json_object_put(alg_vad_dynrange_min_object);
+//            json_object_put(alg_vad_dynrange_min_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type float/double with key %s", KEY_ALG_VAD_DYNRANGE_MIN);
-            json_object_put(alg_vad_dynrange_min_object);
+//            json_object_put(alg_vad_dynrange_min_object);
             goto fail;
         }
     } else {
@@ -706,10 +707,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(alg_vad_dynrange_max_object)) == json_type_double) {
             siren_config.alg_config.alg_vad_dynrange_max = json_object_get_double(alg_vad_dynrange_max_object);
             siren_printf(SIREN_INFO, "vad dynrange max: %f", siren_config.alg_config.alg_vad_dynrange_max);
-            json_object_put(alg_vad_dynrange_max_object);
+//            json_object_put(alg_vad_dynrange_max_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type float/double with key %s", KEY_ALG_VAD_DYNRANGE_MAX);
-            json_object_put(alg_vad_dynrange_max_object);
+//            json_object_put(alg_vad_dynrange_max_object);
             goto fail;
         }
     } else {
@@ -730,17 +731,43 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
                     }
                 }
             }
-            for (int i = 0; i < siren_config.alg_config.alg_need_i2s_delay_mics.size(); i++) {
+            for (int i = 0; i < (int)siren_config.alg_config.alg_need_i2s_delay_mics.size(); i++) {
                 siren_printf(SIREN_INFO, "mic %d use delay", siren_config.alg_config.alg_need_i2s_delay_mics[i]);
             }
-            json_object_put(alg_need_i2s_delay_mics_object);
+//            json_object_put(alg_need_i2s_delay_mics_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type array with key %s", KEY_ALG_NEED_I2S_DELAY_MICS);
-            json_object_put(alg_need_i2s_delay_mics_object);
+//            json_object_put(alg_need_i2s_delay_mics_object);
             goto fail;
         }
     } else {
         siren_printf(SIREN_WARNING, "cannot find key %s", KEY_ALG_NEED_I2S_DELAY_MICS);
+        goto fail;
+    }
+
+    if (TRUE == json_object_object_get_ex(alg_config, KEY_ALG_I2S_DELAY_MICS, &alg_i2s_delay_mics_object)) {
+        if ((type = json_object_get_type(alg_i2s_delay_mics_object)) == json_type_array) {
+            int len = json_object_array_length(alg_i2s_delay_mics_object);
+            if (len > 0) {
+                for (int i = 0; i < len; i++) {
+                    json_object *pos_idx = json_object_array_get_idx(alg_i2s_delay_mics_object, i);
+                    if ((type = json_object_get_type(pos_idx)) == json_type_double) {
+                        double delay = json_object_get_double(pos_idx);
+                        siren_config.alg_config.alg_i2s_delay_mics.push_back(delay);
+                    }
+                }
+            }
+            for (int i = 0; i < (int)siren_config.alg_config.alg_i2s_delay_mics.size(); i++) {
+                siren_printf(SIREN_INFO, "mic use delay %f", siren_config.alg_config.alg_i2s_delay_mics[i]);
+            }
+//            json_object_put(alg_i2s_delay_mics_object);
+        } else {
+            siren_printf(SIREN_WARNING, "expect type array with key %s", KEY_ALG_I2S_DELAY_MICS);
+//            json_object_put(alg_i2s_delay_mics_object);
+            goto fail;
+        }
+    } else {
+        siren_printf(SIREN_WARNING, "cannot find key %s", KEY_ALG_I2S_DELAY_MICS);
         goto fail;
     }
 
@@ -768,10 +795,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
                 siren_printf(SIREN_INFO, "mic pos: %s",
                              build_printable_indx<long double>(mic.pos).c_str());
             }
-            json_object_put(alg_mic_pos_object);
+//            json_object_put(alg_mic_pos_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type array with key %s", KEY_ALG_MIC_POS);
-            json_object_put(alg_mic_pos_object);
+//            json_object_put(alg_mic_pos_object);
             goto fail;
         }
     } else {
@@ -789,16 +816,16 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
                         int sl_mic_idx = json_object_get_int(json_idx);
                         siren_config.alg_config.alg_sl_mics.push_back(sl_mic_idx);
                     }
-                    json_object_put(json_idx);
+//                    json_object_put(json_idx);
                 }
             }
 
             siren_printf(SIREN_INFO, "sl mics: %s",
                          build_printable_indx(siren_config.alg_config.alg_sl_mics).c_str());
-            json_object_put(alg_sl_mics_object);
+//            json_object_put(alg_sl_mics_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type array with key %s", KEY_ALG_SL_MICS);
-            json_object_put(alg_sl_mics_object);
+//            json_object_put(alg_sl_mics_object);
             goto fail;
         }
     } else {
@@ -816,16 +843,16 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
                         int bf_mic_idx = json_object_get_int(json_idx);
                         siren_config.alg_config.alg_bf_mics.push_back(bf_mic_idx);
                     }
-                    json_object_put(json_idx);
+//                    json_object_put(json_idx);
                 }
             }
 
             siren_printf(SIREN_INFO, "bf mics: %s",
                          build_printable_indx(siren_config.alg_config.alg_bf_mics).c_str());
-            json_object_put(alg_vad_mics_object);
+//            json_object_put(alg_vad_mics_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type array with key %s", KEY_ALG_BF_MICS);
-            json_object_put(alg_bf_mics_object);
+//            json_object_put(alg_bf_mics_object);
             goto fail;
         }
     } else {
@@ -837,10 +864,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(alg_opus_compress_object)) == json_type_boolean) {
             siren_config.alg_config.alg_opus_compress = json_object_get_boolean(alg_opus_compress_object);
             siren_printf(SIREN_INFO, "enable opus compression %d", siren_config.alg_config.alg_opus_compress);
-            json_object_put(alg_opus_compress_object);
+//            json_object_put(alg_opus_compress_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type boolean with key %s", KEY_ALG_OPUS_COMPRESS);
-            json_object_put(alg_opus_compress_object);
+//            json_object_put(alg_opus_compress_object);
             goto fail;
         }
     } else {
@@ -853,10 +880,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
             const char *phomod = json_object_get_string(alg_vt_phomod_object);
             siren_printf(SIREN_INFO, "phomod file path set to %s", phomod);
             siren_config.alg_config.alg_vt_phomod = phomod;
-            json_object_put(alg_vt_phomod_object);
+//            json_object_put(alg_vt_phomod_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type string with key %s", KEY_ALG_VT_PHOMOD);
-            json_object_put(alg_vt_phomod_object);
+//            json_object_put(alg_vt_phomod_object);
             goto fail;
         }
     } else {
@@ -869,10 +896,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
             const char *dnnmod = json_object_get_string(alg_vt_dnnmod_object);
             siren_printf(SIREN_INFO, "dnnmod file path set to %s", dnnmod);
             siren_config.alg_config.alg_vt_dnnmod = dnnmod;
-            json_object_put(alg_vt_dnnmod_object);
+//            json_object_put(alg_vt_dnnmod_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type string with key %s", KEY_ALG_VT_DNNMOD);
-            json_object_put(alg_vt_dnnmod_object);
+//            json_object_put(alg_vt_dnnmod_object);
             goto fail;
         }
     } else {
@@ -884,10 +911,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(alg_rs_delay_on_left_right_channel_object)) == json_type_boolean) {
             siren_config.alg_config.alg_rs_delay_on_left_right_channel = json_object_get_boolean(alg_rs_delay_on_left_right_channel_object);
             siren_printf(SIREN_INFO, "enable rs delay %d", siren_config.alg_config.alg_rs_delay_on_left_right_channel);
-            json_object_put(alg_rs_delay_on_left_right_channel_object);
+//            json_object_put(alg_rs_delay_on_left_right_channel_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type boolean with key %s", KEY_ALG_RS_DELAY_ON_LEFT_RIGHT_CHANNEL);
-            json_object_put(alg_rs_delay_on_left_right_channel_object);
+//            json_object_put(alg_rs_delay_on_left_right_channel_object);
             goto fail;
         }
     } else {
@@ -899,10 +926,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(alg_raw_stream_channel_num_object)) == json_type_int) {
             siren_config.raw_stream_config.raw_stream_channel_num = json_object_get_int(alg_raw_stream_channel_num_object);
             siren_printf(SIREN_INFO, "raw stream channel num %d", siren_config.raw_stream_config.raw_stream_channel_num);
-            json_object_put(alg_raw_stream_channel_num_object);
+//            json_object_put(alg_raw_stream_channel_num_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type int with key %s", KEY_RAW_STREAM_CHANNEL_NUM);
-            json_object_put(alg_raw_stream_channel_num_object);
+//            json_object_put(alg_raw_stream_channel_num_object);
             goto fail;
         }
     } else {
@@ -914,10 +941,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(alg_raw_stream_sample_rate_object)) == json_type_int) {
             siren_config.raw_stream_config.raw_stream_sample_rate = json_object_get_int(alg_raw_stream_sample_rate_object);
             siren_printf(SIREN_INFO, "raw stream sample rate %d", siren_config.raw_stream_config.raw_stream_sample_rate);
-            json_object_put(alg_raw_stream_sample_rate_object);
+//            json_object_put(alg_raw_stream_sample_rate_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type int with key %s", KEY_RAW_STREAM_SAMPLE_RATE);
-            json_object_put(alg_raw_stream_sample_rate_object);
+//            json_object_put(alg_raw_stream_sample_rate_object);
             goto fail;
         }
     } else {
@@ -929,10 +956,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(alg_raw_stream_byte_object)) == json_type_int) {
             siren_config.raw_stream_config.raw_stream_byte = json_object_get_int(alg_raw_stream_byte_object);
             siren_printf(SIREN_INFO, "raw stream byte %d", siren_config.raw_stream_config.raw_stream_byte);
-            json_object_put(alg_raw_stream_byte_object);
+//            json_object_put(alg_raw_stream_byte_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type int with key %s", KEY_RAW_STREAM_BYTE);
-            json_object_put(alg_raw_stream_byte_object);
+//            json_object_put(alg_raw_stream_byte_object);
             goto fail;
         }
     } else {
@@ -1068,12 +1095,12 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
                     siren_printf(SIREN_INFO, "vt_nnet_path:%s", config.vt_nnet_path.c_str());
                     siren_config.alg_config.def_vt_configs.push_back(config);
                 }
-                json_object_put(json_idx);
+//               json_object_put(json_idx);
             }
-            json_object_put(alg_def_vt_object);
+//           json_object_put(alg_def_vt_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type json with key %s", KEY_ALG_DEF_VT);
-            json_object_put(alg_def_vt_object);
+//            json_object_put(alg_def_vt_object);
         }
     } else {
         siren_printf(SIREN_WARNING, "no default vt world found in config");
@@ -1084,10 +1111,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(mic_array_record_object)) == json_type_boolean) {
             siren_config.debug_config.mic_array_record = json_object_get_boolean(mic_array_record_object);
             siren_printf(SIREN_INFO, "enable micarray recording %s", siren_config.debug_config.mic_array_record ? "true" : "false");
-            json_object_put(mic_array_record_object);
+//            json_object_put(mic_array_record_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type boolean with key %s", KEY_DEBUG_MIC_ARRAY_RECORD);
-            json_object_put(mic_array_record_object);
+//            json_object_put(mic_array_record_object);
         }
     } else {
         siren_printf(SIREN_WARNING, "cannot find key %s", KEY_DEBUG_MIC_ARRAY_RECORD);
@@ -1097,10 +1124,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(preprocessed_result_record_object)) == json_type_boolean) {
             siren_config.debug_config.preprocessed_result_record = json_object_get_boolean(preprocessed_result_record_object);
             siren_printf(SIREN_INFO, "enable preprocess result recording %s", siren_config.debug_config.preprocessed_result_record ? "true" : "false");
-            json_object_put(preprocessed_result_record_object);
+//            json_object_put(preprocessed_result_record_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type boolean with key %s", KEY_DEBUG_PRE_RESULT_RECORD);
-            json_object_put(preprocessed_result_record_object);
+//            json_object_put(preprocessed_result_record_object);
         }
     } else {
         siren_printf(SIREN_WARNING, "cannot find key %s", KEY_DEBUG_PRE_RESULT_RECORD);
@@ -1110,10 +1137,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(processed_result_record_object)) == json_type_boolean) {
             siren_config.debug_config.processed_result_record = json_object_get_boolean(processed_result_record_object);
             siren_printf(SIREN_INFO, "enable processed result recording %s", siren_config.debug_config.processed_result_record ? "true" : "false");
-            json_object_put(processed_result_record_object);
+//            json_object_put(processed_result_record_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type boolean with key %s", KEY_DEBUG_PROC_RESULT_RECORD);
-            json_object_put(processed_result_record_object);
+//            json_object_put(processed_result_record_object);
         }
     } else {
         siren_printf(SIREN_WARNING, "cannot find key %s", KEY_DEBUG_PROC_RESULT_RECORD);
@@ -1124,10 +1151,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(rs_record_object)) == json_type_boolean) {
             siren_config.debug_config.rs_record = json_object_get_boolean(rs_record_object);
             siren_printf(SIREN_INFO, "enable rs result recording %s", siren_config.debug_config.rs_record ? "true" : "false");
-            json_object_put(rs_record_object);
+//            json_object_put(rs_record_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type boolean with key %s", KEY_DEBUG_RS_RECORD);
-            json_object_put(rs_record_object);
+//            json_object_put(rs_record_object);
         }
     } else {
         siren_printf(SIREN_WARNING, "cannot find key %s", KEY_DEBUG_RS_RECORD);
@@ -1137,10 +1164,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(aec_record_object)) == json_type_boolean) {
             siren_config.debug_config.aec_record = json_object_get_boolean(aec_record_object);
             siren_printf(SIREN_INFO, "enable aec result recording %s", siren_config.debug_config.aec_record ? "true" : "false");
-            json_object_put(aec_record_object);
+//            json_object_put(aec_record_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type boolean with key %s", KEY_DEBUG_AEC_RECORD);
-            json_object_put(aec_record_object);
+//            json_object_put(aec_record_object);
         }
     } else {
         siren_printf(SIREN_WARNING, "cannot find key %s", KEY_DEBUG_AEC_RECORD);
@@ -1150,10 +1177,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(bf_record_object)) == json_type_boolean) {
             siren_config.debug_config.bf_record = json_object_get_boolean(bf_record_object);
             siren_printf(SIREN_INFO, "enable bf result recording %s", siren_config.debug_config.bf_record ? "true" : "false");
-            json_object_put(bf_record_object);
+//            json_object_put(bf_record_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type boolean with key %s", KEY_DEBUG_BF_RECORD);
-            json_object_put(bf_record_object);
+//           json_object_put(bf_record_object);
         }
     } else {
         siren_printf(SIREN_WARNING, "cannot find key %s", KEY_DEBUG_BF_RECORD);
@@ -1163,10 +1190,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(bf_raw_record_object)) == json_type_boolean) {
             siren_config.debug_config.bf_raw_record = json_object_get_boolean(bf_raw_record_object);
             siren_printf(SIREN_INFO, "enable bf raw result recording %s", siren_config.debug_config.bf_raw_record ? "true" : "false");
-            json_object_put(bf_raw_record_object);
+//            json_object_put(bf_raw_record_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type boolean with key %s", KEY_DEBUG_BF_RAW_RECORD);
-            json_object_put(bf_raw_record_object);
+//            json_object_put(bf_raw_record_object);
         }
     } else {
         siren_printf(SIREN_WARNING, "cannot find key %s", KEY_DEBUG_BF_RAW_RECORD);
@@ -1176,10 +1203,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(vad_record_object)) == json_type_boolean) {
             siren_config.debug_config.vad_record = json_object_get_boolean(vad_record_object);
             siren_printf(SIREN_INFO, "enable vad result recording %s", siren_config.debug_config.vad_record ? "true" : "false");
-            json_object_put(vad_record_object);
+//            json_object_put(vad_record_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type boolean with key %s", KEY_DEBUG_VAD_RECORD);
-            json_object_put(vad_record_object);
+//            json_object_put(vad_record_object);
         }
     } else {
         siren_printf(SIREN_WARNING, "cannot find key %s", KEY_DEBUG_VAD_RECORD);
@@ -1189,10 +1216,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         if ((type = json_object_get_type(debug_opu_record_object)) == json_type_boolean) {
             siren_config.debug_config.debug_opu_record = json_object_get_boolean(debug_opu_record_object);
             siren_printf(SIREN_INFO, "enable opu result recording %s", siren_config.debug_config.debug_opu_record ? "true" : "false");
-            json_object_put(debug_opu_record_object);
+//            json_object_put(debug_opu_record_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type boolean with key %s", KEY_DEBUG_OPU_RECORD);
-            json_object_put(debug_opu_record_object);
+//           json_object_put(debug_opu_record_object);
         }
     } else {
         siren_printf(SIREN_WARNING, "cannot find key %s", KEY_DEBUG_OPU_RECORD);
@@ -1203,10 +1230,10 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
             const char *record_path = json_object_get_string(record_path_object);
             siren_printf(SIREN_INFO, "record path is %s", record_path);
             siren_config.debug_config.recording_path = record_path;
-            json_object_put(record_path_object);
+//            json_object_put(record_path_object);
         } else {
             siren_printf(SIREN_WARNING, "expect type string with key %s", KEY_DEBUG_RECORD_PATH);
-            json_object_put(record_path_object);
+//            json_object_put(record_path_object);
             goto fail;
         }
     } else {
@@ -1214,15 +1241,15 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
         goto fail;
     }
 
-    json_object_put(basic_config);
-    json_object_put(alg_config);
-    json_object_put(debug_config);
+//    json_object_put(basic_config);
+//    json_object_put(alg_config);
+//    json_object_put(debug_config);
     json_object_put(config_object);
     return CONFIG_OK;
 fail:
-    json_object_put(basic_config);
-    json_object_put(alg_config);
-    json_object_put(debug_config);
+//    json_object_put(basic_config);
+//    json_object_put(alg_config);
+//    json_object_put(debug_config);
     json_object_put(config_object);
     return CONFIG_ERROR_PARSE_FAIL;
 }

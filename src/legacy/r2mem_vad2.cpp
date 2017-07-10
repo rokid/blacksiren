@@ -1,4 +1,4 @@
-//
+﻿//
 //  r2mem_vad2.cpp
 //  r2audio
 //
@@ -21,7 +21,9 @@ r2mem_vad2::r2mem_vad2(float fBaseRange, float fMinDynaRange, float fMaxDynaRang
   VD_SetVadParam(m_hEngine_Vad, VD_PARAM_MAXSPEECHFRAMENUM, &MaxSpeechFrameNum) ;
   
   m_iVadEndParam = 45;
+  m_iVadEndPitchParam = 1 ;
   VD_SetVadParam(m_hEngine_Vad, VD_PARAM_MINSILFRAMENUM, &m_iVadEndParam);
+  VD_SetVadParam(m_hEngine_Vad, VD_PARAM_ENDPITCH_FRAMENUM, &m_iVadEndPitchParam);
   
   m_iLen_In = 0 ;
   m_iLen_In_Total = R2_AUDIO_SAMPLE_RATE * 5 ;
@@ -31,6 +33,9 @@ r2mem_vad2::r2mem_vad2(float fBaseRange, float fMinDynaRange, float fMaxDynaRang
   m_iLen_Out_Total = R2_AUDIO_SAMPLE_RATE * 5 ;
   m_pData_Out = R2_SAFE_NEW_AR1(m_pData_Out, float, m_iLen_Out_Total);
 
+  
+  m_iLen_NoNew = R2_AUDIO_SAMPLE_RATE * 3 ;
+  m_pData_NoNew = R2_SAFE_NEW_AR1(m_pData_NoNew, float, m_iLen_NoNew) ;
 }
 
 r2mem_vad2::~r2mem_vad2(void){
@@ -39,6 +44,8 @@ r2mem_vad2::~r2mem_vad2(void){
   R2_SAFE_DEL_AR1(m_pData_Out);
   
   VD_DelVad(m_hEngine_Vad);
+  
+  R2_SAFE_DEL_AR1(m_pData_NoNew) ;
   
 }
 
@@ -144,10 +151,13 @@ int r2mem_vad2::process(float* pData_In, int iLen_In, int bIsEnd, int bIsAec, in
         i ++ ;
         if (i < iFrmNum) {
           m_iLen_In = (iFrmNum - i) * m_iFrmSize ;
-          float* pData_Left = R2_SAFE_NEW_AR1(pData_Left, float, m_iLen_In);
-          memcpy(pData_Left, m_pData_In + i * m_iFrmSize , sizeof(float) * m_iLen_In);
-          memcpy(m_pData_In, pData_Left, sizeof(float) * m_iLen_In);
-          R2_SAFE_DEL_AR1(pData_Left);
+          if (m_iLen_In > m_iLen_NoNew) {
+            m_iLen_NoNew = m_iLen_In * 2 ;
+            R2_SAFE_DEL_AR1(m_pData_NoNew);
+            m_pData_NoNew = R2_SAFE_NEW_AR1(m_pData_NoNew, float, m_iLen_NoNew);
+          }
+          memcpy(m_pData_NoNew, m_pData_In + i * m_iFrmSize , sizeof(float) * m_iLen_In);
+          memcpy(m_pData_In, m_pData_NoNew, sizeof(float) * m_iLen_In);
         }
         break ;
       }
@@ -201,9 +211,14 @@ int r2mem_vad2::setvadendparam(int iFrmNum){
   
   if (iFrmNum <= 0 ) {
     VD_SetVadParam(m_hEngine_Vad, VD_PARAM_MINSILFRAMENUM, &m_iVadEndParam);
+    VD_SetVadParam(m_hEngine_Vad, VD_PARAM_ENDPITCH_FRAMENUM, &m_iVadEndPitchParam) ;
   }else{
+    
     ZLOG_INFO("---------------------set vad end %d0 ms",iFrmNum);
     VD_SetVadParam(m_hEngine_Vad, VD_PARAM_MINSILFRAMENUM, &iFrmNum);
+    int kkk = 0 ;
+    VD_SetVadParam(m_hEngine_Vad, VD_PARAM_ENDPITCH_FRAMENUM, &kkk) ;
+    
   }
   
   return 0 ;

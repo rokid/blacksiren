@@ -153,7 +153,8 @@ int SirenProcessorImpl::init() {
             siren_printf(SIREN_ERROR, "wtf idx in need i2s delay larger than mic num");
             continue;
         }
-        micinfo.mic_i2s_delay[mic_idx] = 1.0f / 96000.0f;
+        micinfo.mic_i2s_delay[mic_idx] = config.alg_config.alg_i2s_delay_mics[i];
+        siren_printf(SIREN_INFO, "mic %d use delay %f", mic_idx, config.alg_config.alg_i2s_delay_mics[i]);
     }
 
     int aec_mic_num = config.alg_config.alg_aec_mics.size();
@@ -803,7 +804,7 @@ void SirenProcessorImpl::syncVTWord(std::vector<siren_vt_word> &words) {
     int i;
 
     //load default
-    for (i = 0; i < micinfo.currentWordNum; i++) {
+    for (i = 0; i < (int)config.alg_config.def_vt_configs.size(); i++) {
         micinfo.m_pWordLst[i].iWordType = (WordType)config.alg_config.def_vt_configs[i].vt_type;
         strcpy(micinfo.m_pWordLst[i].pWordContent_UTF8,
                config.alg_config.def_vt_configs[i].vt_word.c_str());
@@ -905,8 +906,10 @@ void SirenProcessorImpl::syncVTWord(std::vector<siren_vt_word> &words) {
         } else {
             siren_printf(SIREN_INFO, "neet invalid maybe useless");
         }
+        i++;
     }
 
+    siren_printf(SIREN_INFO, "sync %d words", i);
     unit.m_pMem_vbv3->SetWords(micinfo.m_pWordLst, micinfo.currentWordNum);
 }
 

@@ -63,6 +63,7 @@ struct MicPos {
 
 #define KEY_ALG_MIC_POS "alg_mic_pos"
 #define KEY_ALG_NEED_I2S_DELAY_MICS "alg_need_i2s_delay_mics"
+#define KEY_ALG_I2S_DELAY_MICS "alg_i2s_delay_mics"
 #define KEY_ALG_SL_MICS "alg_sl_mics"
 #define KEY_ALG_BF_MICS "alg_bf_mics"
 #define KEY_ALG_OPUS_COMPRESS "alg_opus_compress"
@@ -126,6 +127,7 @@ struct AlgConfig {
     std::vector<int> alg_aec_mat_aff_cpus;
     std::vector<int> alg_vad_mics;
     std::vector<int> alg_need_i2s_delay_mics;
+    std::vector<double> alg_i2s_delay_mics;
     std::vector<MicPos> alg_mic_pos;
     std::vector<int> alg_sl_mics;
     std::vector<int> alg_bf_mics;

@@ -1,4 +1,4 @@
-//
+﻿//
 //  r2mem_vad2.h
 //  r2audio
 //
@@ -37,6 +37,7 @@ public:
   
   
   int m_iVadEndParam ;
+  int m_iVadEndPitchParam ;
   int setvadendparam(int iFrmNum);
   
 public:
@@ -54,6 +55,10 @@ public:
   VD_HANDLE m_hEngine_Vad ;
   int m_iLastFrame ;
   int m_iVadState ;
+  
+  //No New
+  int m_iLen_NoNew ;
+  float* m_pData_NoNew ;
   
 };
 
