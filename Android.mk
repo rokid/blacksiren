@@ -31,11 +31,11 @@ endif
 
 include $(CLEAR_VARS)
 LOCAL_PREBUILT_LIBS := \
-		libr2audio:thirdparty/support/$(TARGET_ARCH)/libs/legacy/libr2audio.so \
-		libr2ssp:thirdparty/support/$(TARGET_ARCH)/libs/libr2ssp.so \
-		libztvad:thirdparty/support/$(TARGET_ARCH)/libs/libztvad.so \
-		libr2vt:thirdparty/support/$(TARGET_ARCH)/libs/legacy/libr2vt.so \
-		libopus:thirdparty/support/$(TARGET_ARCH)/libs/libopus.a
+		libr2audio:thirdparty/support/libs/android/armv7eabi/legacy/libr2audio.so \
+		libr2ssp:thirdparty/support/libs/android/armv7eabi/libr2ssp.so \
+		libztvad:thirdparty/support/libs/android/armv7eabi/libztvad.so \
+		libr2vt:thirdparty/support/libs/android/armv7eabi/legacy/libr2vt.so \
+		libopus:thirdparty/support/libs/android/armv7eabi/libopus.a
 include $(BUILD_MULTI_PREBUILT)
 
 THIRD_INCLUDES += \

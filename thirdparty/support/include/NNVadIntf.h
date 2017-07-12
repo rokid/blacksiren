@@ -111,6 +111,8 @@ typedef void	*VD_HANDLE;
 #define VD_PARAM_MINSILRATIO	4
     /* enable pitch detection */
 #define VD_PARAM_ENBLEPITCH     8
+#define VD_PARAM_BEGINPITCH_FRAMENUM   9
+#define VD_PARAM_ENDPITCH_FRAMENUM     10
 
 VD_HANDLE NNVAPI VD_NewVad(int nMode);
 int NNVAPI VD_ResetVad(VD_HANDLE hVad);

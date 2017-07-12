@@ -16,7 +16,7 @@
         "alg_use_legacy_config_file":true,
         "alg_legacy_config_file_path":"/system/workdir_cn",
         "alg_lan":"zh",
-        "alg_rs_mics":[0,1,2,3],
+        "alg_rs_mics":[0,1,2,3,4,5],
         "alg_aec":true,
         "alg_aec_mics":[0,1,2,3],
         "alg_aec_ref_mics":[4,5],

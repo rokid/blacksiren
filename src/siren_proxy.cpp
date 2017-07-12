@@ -44,6 +44,20 @@ RecordingThread::RecordingThread(SirenProxy *siren) :
     currentRetry = 0;
     errorRetry = config.siren_input_err_retry_num;
     retryTimeout = config.siren_input_err_retry_timeout;
+
+    if (config.debug_config.mic_array_record) {
+        std::string basePath("/mic_array.pcm");
+        micRecording .assign(config.debug_config.recording_path).append(basePath);
+        siren_printf(SIREN_INFO, "mic_array debug use path %s", micRecording.c_str());
+        micRecordingStream.open(micRecording.c_str(), std::ios::out | std::ios::binary);
+        if (micRecordingStream.good()) {
+            doMicRecording = true;
+        } else {
+            doMicRecording = false;
+            siren_printf(SIREN_ERROR, "mic array recording path not exist");
+        }
+    }
+
 }
 
 RecordingThread::~RecordingThread() {
@@ -169,6 +183,10 @@ void RecordingThread::recordingFn() {
             }
 
             len = pSiren->input_callback->read_input(pSiren->token, frameBuffer, frameSize);
+            if (doMicRecording) {
+                micRecordingStream.write(frameBuffer, frameSize);
+            }
+            
             //
             if (!recordingStart) {
                 continue;
@@ -280,7 +298,7 @@ siren_status_t SirenProxy::init_siren(void *token, const char *path, siren_input
     } else {
         //load phoneme list
         phonemeGen.loadPhoneme();
-        
+
         launchRequestThread();
         launchResponseThread();
 
@@ -449,7 +467,7 @@ void SirenProxy::responseThreadHandler() {
                     pData = (char *)pProcessedVoiceResult + sizeof(ProcessedVoiceResult);
                     pProcessedVoiceResult->data = pData;
                 }
-            
+
                 voice_event_t *voice_event = new voice_event_t;
                 memset((char *)voice_event, 0, sizeof(voice_event_t));
 
@@ -462,7 +480,7 @@ void SirenProxy::responseThreadHandler() {
                     voice_event->flag |= SL_MASK;
                     voice_event->sl = pProcessedVoiceResult->sl;
                 } else if (pProcessedVoiceResult->hasVoice == 1) {
-                    voice_event->flag |= VOICE_MASK;    
+                    voice_event->flag |= VOICE_MASK;
                     voice_event->buff = pProcessedVoiceResult->data;
                 } else if (pProcessedVoiceResult->hasVT == 1) {
                     voice_event->flag |= VT_MASK;

@@ -453,6 +453,7 @@ int SirenAudioVBVProcessor::process(PreprocessVoicePackage *voicePackage,
             } else {
                 hasVT = 1;
                 siren_printf(SIREN_INFO, "vt word with %s [%d, %d]%f", vt_word.c_str(), start, end, vt_energy);
+                len = 0;
             }
         }
 

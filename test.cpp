@@ -20,7 +20,15 @@
 #include "lfqueue.h"
 #include "siren_channel.h"
 
+#if defined(__ANDROID__) || defined(ANDROID)
 #include "r2hw/mic_array.h"
+#define DATA_TOP_DIR "/data/"
+#else
+#include <hardware/mic_array.h>
+#define DATA_TOP_DIR "/data/"
+#endif
+
+#define PATH_ME(pathme) (DATA_TOP_DIR pathme)
 
 void test_fork_socketpair() {
     int sockets[2], child;
@@ -150,7 +158,7 @@ void ChannelTest::thread_handler() {
     std::ofstream consumer_dump;
     int next = 10;
     bool dump = false;
-    consumer_dump.open("/data/consumer.dump", std::ios::out);
+    consumer_dump.open(PATH_ME("consumer.dump"), std::ios::out);
     reader.prepareOnReadSideProcess();
     BlackSiren::Message *msg = nullptr;
     char *data = nullptr;
@@ -247,8 +255,8 @@ std::ifstream test_recording_stream;
 siren_t siren;
 int init_input_stream(void *token) {
     siren_printf(BlackSiren::SIREN_INFO, "init input stream");
-    test_recording_stream.open("/data/debug0.pcm", std::ios::in | std::ios::binary);
-    recordingDebugStream.open("/data/test.pcm", std::ios::out | std::ios::binary);
+    test_recording_stream.open(PATH_ME("debug0.pcm"), std::ios::in | std::ios::binary);
+    recordingDebugStream.open(PATH_ME("test.pcm"), std::ios::out | std::ios::binary);
     return 0;
 }
 
@@ -331,7 +339,7 @@ static bool vt_flag = false;
 void debug_voice_event(voice_event_t *event) {
     if (HAS_VT(event->flag)) {
         siren_printf(BlackSiren::SIREN_INFO,
-                "vt with %s [%d,%d]@%f", event->buff, 
+                "{%d} vt with %s [%d,%d]@%f", event->event, event->buff, 
                 event->vt.start, event->vt.end, event->vt.energy);
         vt_flag = true;
         len_start = event->vt.start;
@@ -344,7 +352,7 @@ void debug_voice_event(voice_event_t *event) {
             vt_flag = false;
             std::fstream output;
             char path[256];
-            sprintf(path, "/data/dump%d.pcm", dump_id);
+            sprintf(path, PATH_ME("dump%d.pcm"), dump_id);
             dump_id++;
             output.open(path, std::ios::out|std::ios::binary);
             char *p = (char *)event->buff;
@@ -439,7 +447,7 @@ int init_xmos_input_stream(void *token) {
         return -1;
     }
 
-    recordingDebugStream.open("/data/test.pcm", std::ios::out | std::ios::binary);
+    recordingDebugStream.open(PATH_ME("test.pcm"), std::ios::out | std::ios::binary);
     return 0;
 }
 
@@ -563,7 +571,7 @@ void test_mic() {
         return;
     }
 
-    recordingDebugStream.open("/data/test.pcm", std::ios::out | std::ios::binary);
+    recordingDebugStream.open(PATH_ME("test.pcm"), std::ios::out | std::ios::binary);
     if (0 != mic_array_device->start_stream(mic_array_device)) {
         std::cout << "mic_array start stream failed" << std::endl;
     }
@@ -601,7 +609,7 @@ void test_download() {
     CURLcode res;
 
     curl_global_init(CURL_GLOBAL_DEFAULT);
-    FILE *f = fopen("/data/blacksiren/blacksiren.json", "w");
+    FILE *f = fopen(PATH_ME("blacksiren/blacksiren.json"), "w");
     curl = curl_easy_init();
     if (curl) {
         std::string ip = getAddressByHostname("config.open.rokid.com");

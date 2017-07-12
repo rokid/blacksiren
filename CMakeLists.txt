@@ -1,8 +1,7 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8.8)
+cmake_minimum_required(VERSION 3.0)
 
-PROJECT(rokid.blacksiren)
-SET(VERSION 0.1)
-SET(CMAKE_MACOSX_RPATH 1)
+project(rokid.blacksiren)
+set(VERSION 0.1)
 
 macro(CheckExitCodeAndExitIfError)
   if(NOT ${ExitCode} EQUAL 0)
@@ -10,7 +9,7 @@ macro(CheckExitCodeAndExitIfError)
   endif()
 endmacro(CheckExitCodeAndExitIfError)
 
-option(BUILD_DEMO "Build the demo" OFF)
+option(BUILD_DEMO "Build the demo" ON)
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/.lib)
 
@@ -31,16 +30,17 @@ message("=====>>${COMMON_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_FLAGS} -Wall -Wextra -Wunused-parameter -std=gnu++11")
 message("=====>>${CMAKE_CXX_FLAGS}")
 
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 include (TargetArch)
 target_architecture(DETECTED_ARCH)
 
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/thirdparty/support/include)
 if (DETECTED_ARCH MATCHES "armv8")
-	include_directories(${CMAKE_CURRENT_BINARY_DIR}/thirdparty/support/arm64/include)
+	include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/support/arm64/include)
+	link_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/support/libs/linux/arm64)
 elseif (DETECTED_ARCH MATCHES "arm.*")
-	include_directories(${CMAKE_CURRENT_BINARY_DIR}/thirdparty/support/arm/include)
+	include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/support/arm/include)
+	link_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/support/libs/linux/arm)
 endif()
 
 #
@@ -48,3 +48,8 @@ endif()
 #
 add_subdirectory(src)
 
+if (BUILD_DEMO)
+
+add_executable(bsiren.demo test.cpp)
+target_link_libraries(bsiren.demo bsiren blis opus fftw3f android_cutils android_hardware r2ad3 r2vt4 r2ssp ztvad ${JSON-C_LIBRARIES} ${CURL_LIBRARIES})
+endif()

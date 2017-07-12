@@ -10,6 +10,7 @@
 #include <condition_variable>
 #include <vector>
 #include <iterator>
+#include <fstream>
 
 #include "siren_config.h"
 #include "siren_channel.h"
@@ -72,6 +73,10 @@ private:
 
     int frameSize;
     int sockets[2];
+
+    bool doMicRecording;
+    std::string micRecording;
+    std::ofstream micRecordingStream;
 };
 
 class SirenProxy : public ISiren {
