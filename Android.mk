@@ -4,10 +4,10 @@ CURRENT_PATH := $(LOCAL_PATH)
 include $(LOCAL_PATH)/siren_config.mk
 include $(LOCAL_PATH)/siren_enable_flags.mk
 
-
+$(info -->$(ROKID_BLACKSIREN_CONFIG))
 TARGET_CONFIG = $(ROKID_BLACKSIREN_CONFIG)
 ifeq (,$(TARGET_CONFIG))
-TARGET_CONFIG = mini
+TARGET_CONFIG = nana_6_2
 endif
 
 $(info TARGET_CONFIG=$(TARGET_CONFIG))
@@ -35,7 +35,8 @@ LOCAL_PREBUILT_LIBS := \
 		libr2ssp:thirdparty/support/libs/android/armv7eabi/libr2ssp.so \
 		libztvad:thirdparty/support/libs/android/armv7eabi/libztvad.so \
 		libr2vt:thirdparty/support/libs/android/armv7eabi/legacy/libr2vt.so \
-		libopus:thirdparty/support/libs/android/armv7eabi/libopus.a
+		libopus:thirdparty/support/libs/android/armv7eabi/libopus.a \
+		libr2mvdrbf:thirdparty/support/libs/android/armv7eabi/libr2mvdrbf.so
 include $(BUILD_MULTI_PREBUILT)
 
 THIRD_INCLUDES += \
@@ -63,7 +64,7 @@ endif
 
 LOCAL_CFLAGS:= $(L_CFLAGS) -Wall -Wextra -std=gnu++11
 LOCAL_MODULE:= libbsiren
-LOCAL_SHARED_LIBRARIES += liblog libr2ssp libztvad libr2vt libcurl 
+LOCAL_SHARED_LIBRARIES += liblog libr2ssp libztvad libr2vt libcurl libr2mvdrbf 
 LOCAL_STATIC_LIBRARIES += libjsonc_static libopus
 
 ifdef CONFIG_USE_AD1 
@@ -89,7 +90,6 @@ LOCAL_C_INCLUDES += \
 		$(LOCAL_PATH)/include \
 		falcon/platform/hardware/common \
 		external/curl/include \
-		robot/hardware/include
 
 ifeq ($(PLATFORM_SDK_VERSION),22)
 LOCAL_SHARED_LIBRARIES += libdl

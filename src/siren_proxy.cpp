@@ -679,8 +679,8 @@ siren_vt_t SirenProxy::add_vt_word(siren_vt_word *word, bool use_default_setting
         word->alg_config.vt_block_min_score = 2.7f;
         word->alg_config.vt_left_sil_det = true;
         word->alg_config.vt_right_sil_det = false;
-        word->alg_config.vt_remote_check_with_aec = false;
-        word->alg_config.vt_remote_check_without_aec = false;
+        word->alg_config.vt_remote_check_with_aec = true;
+        word->alg_config.vt_remote_check_without_aec = true;
         word->alg_config.vt_local_classify_check = false;
         word->alg_config.vt_classify_shield = -0.3;
         word->alg_config.nnet_path = "";

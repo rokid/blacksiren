@@ -32,6 +32,7 @@
         "alg_vad_baserange":1.25,
         "alg_vad_dynrange_min":3.5,
         "alg_vad_dynrange_max":6.0,
+        "alg_bf_scaling":256,
         "alg_need_i2s_delay_mics":[1,3,5,7],
         "alg_i2s_delay_mics":[0.00001041, 0.00001041, 0.00001041, 0.00001041],
         "alg_mic_pos":[[0.00000000, 0.03000000, 0.00000000],
@@ -44,7 +45,7 @@
 	    [0.0, 0.0, 0.0]],
             "alg_sl_mics":[0,1,2,3],
             "alg_bf_mics":[0,1,2,3],
-            "alg_opus_compress":false,
+            "alg_opus_compress":true,
             "alg_vt_phomod":"/system/workdir_cn/phonetable",
             "alg_vt_dnnmod":"/system/workdir_cn/final.svd.mod",
             "alg_def_vt":[
@@ -57,7 +58,7 @@
                     "vt_left_check":true,
                     "vt_right_right":true,
                     "vt_remote_check_with_aec":true,
-                    "vt_remote_check_without_aec":false,
+                    "vt_remote_check_without_aec":true,
                     "vt_local_classify_check":true,
                     "vt_classify_shield":-0.3,
                     "vt_nnet_path":"/system/workdir_cn/final.ruoqi.mod"

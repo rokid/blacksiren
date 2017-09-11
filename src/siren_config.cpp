@@ -103,6 +103,7 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
     json_object *alg_vad_baserange_object = nullptr;
     json_object *alg_vad_dynrange_min_object = nullptr;
     json_object *alg_vad_dynrange_max_object = nullptr;
+    json_object *alg_bf_scaling_object = nullptr;
 
     json_object *alg_need_i2s_delay_mics_object = nullptr;
     json_object *alg_i2s_delay_mics_object = nullptr;
@@ -716,6 +717,19 @@ config_error_t SirenConfigurationManager::loadConfigFromJSON(std::string &conten
     } else {
         siren_printf(SIREN_WARNING, "cannot find key %s", KEY_ALG_VAD_DYNRANGE_MAX);
         goto fail;
+    }
+
+    if (TRUE == json_object_object_get_ex(alg_config, KEY_ALG_BF_SCALING, &alg_bf_scaling_object)) {
+        if ((type = json_object_get_type(alg_bf_scaling_object)) == json_type_double) {
+            siren_config.alg_config.alg_bf_scaling = json_object_get_double(alg_bf_scaling_object);
+            siren_printf(SIREN_INFO, "bf scaling: %f", siren_config.alg_config.alg_bf_scaling);
+        } else {
+            siren_printf(SIREN_WARNING, "expect type float/double with key %s", KEY_ALG_BF_SCALING);
+            siren_config.alg_config.alg_bf_scaling = 1.0f;
+        }
+    } else {
+        siren_printf(SIREN_WARNING, "cannot find key %s", KEY_ALG_BF_SCALING);
+        siren_config.alg_config.alg_bf_scaling = 1.0f;
     }
 
 
@@ -1343,21 +1357,43 @@ config_error_t SirenConfigurationManager::parseConfigFile() {
     bool useRemote = false;
     updateConfigFile(useRemote);
     if (!useRemote) {
-        siren_printf(SIREN_INFO, "use backup %s", CONFIG_BACKUP_FILE_PATH);
-        std::ifstream istream(CONFIG_BACKUP_FILE_PATH);
-        //load backup failed use legacy
-        if (!istream.good()) {
-            siren_printf(SIREN_ERROR, "config file is not exist or other error");
-            error_status = CONFIG_ERROR_OPEN_FILE;
+        bool use_valid_path = false;
+        if (validPath) {
+            std::ifstream istream(config_file_path.c_str());
+            if (!istream.good()) {
+                siren_printf(SIREN_ERROR, "%s config file not exist or permission denied", config_file_path.c_str());
+            } else {
+                std::stringstream ss;
+                ss << istream.rdbuf();
+                std::string contents_config(ss.str());
+                std::cout << contents_config.c_str() << std::endl;
+                error_status = loadConfigFromJSON(contents_config, siren_config);
+                siren_printf(SIREN_INFO, "load config with %d", error_status);
+                if (error_status == CONFIG_OK) {
+                    use_valid_path = true;
+                }
+            }
+        } else {
+            use_valid_path = false;
         }
 
-        if (error_status == CONFIG_OK) {
-            std::stringstream string_buffer;
-            string_buffer << istream.rdbuf();
-            std::string contents(string_buffer.str());
-            std::cout << contents.c_str() << std::endl;
-            error_status = loadConfigFromJSON(contents, siren_config);
-            siren_printf(SIREN_INFO, "load config with %d", error_status);
+        if (!use_valid_path) {
+            siren_printf(SIREN_INFO, "use backup %s", CONFIG_BACKUP_FILE_PATH);
+            std::ifstream istream(CONFIG_BACKUP_FILE_PATH);
+            //load backup failed use legacy
+            if (!istream.good()) {
+                siren_printf(SIREN_ERROR, "config file is not exist or other error");
+                error_status = CONFIG_ERROR_OPEN_FILE;
+            }
+
+            if (error_status == CONFIG_OK) {
+                std::stringstream string_buffer;
+                string_buffer << istream.rdbuf();
+                std::string contents(string_buffer.str());
+                std::cout << contents.c_str() << std::endl;
+                error_status = loadConfigFromJSON(contents, siren_config);
+                siren_printf(SIREN_INFO, "load config with %d", error_status);
+            }
         }
     }
 
@@ -1368,6 +1404,10 @@ config_error_t SirenConfigurationManager::parseConfigFile() {
 #else
     /* TODO: use config file */
 #endif
+
+    if (error_status != CONFIG_OK) {
+        abort();
+    }
 
     return error_status;
 }

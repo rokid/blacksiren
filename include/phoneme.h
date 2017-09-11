@@ -172,6 +172,8 @@ const char PHONEME[] =
 "cuo4 c_B w o4_E\n"
 "da1 d_B a1_E\n"
 "da2 d_B a2_E\n"
+"da3 d_B a3_E\n"
+"da4 d_B a4_E\n"
 "dai3 d_B A3 Y_E\n"
 "dai4 d_B A4 Y_E\n"
 "dan1 d_B A1 N_E\n"

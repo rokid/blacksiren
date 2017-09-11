@@ -48,6 +48,7 @@ struct MicPos {
 #define KEY_ALG_AEC_SHIELD "alg_aec_shield"
 #define KEY_ALG_AEC_AFF_CPUS "alg_aec_aff_cpus"
 #define KEY_ALG_AEC_MAT_AFF_CPUS "alg_aec_mat_aff_cpus"
+#define KEY_ALG_BF_SCALING "alg_bf_scaling"
 
 #define KEY_ALG_RAW_STREAM_SL_DIRECTION "alg_raw_stream_sl_direction"
 #define KEY_ALG_RAW_STREAM_BF "alg_raw_stream_bf"
@@ -137,13 +138,14 @@ struct AlgConfig {
     std::vector<DefVTConfig> def_vt_configs;
 
     int alg_lan;
-    
+   
     float alg_aec_shield = 200.0f;
     float alg_raw_stream_sl_direction = 180.0f;
     
     float alg_vad_baserange = 1.25f;
     float alg_vad_dynrange_min = 3.5f;
     float alg_vad_dynrange_max = 6.0f;
+    float alg_bf_scaling = 1.0f;
 
     bool alg_use_legacy_ssp_config_file = true;
     bool alg_aec = true;

@@ -274,6 +274,7 @@ bool SirenAudioVBVProcessor::hasVTInfo(int prop, char *data) {
 
 void SirenAudioVBVProcessor::setSysState(int state, bool shouldCallback) {
     r2v_state = (r2v_sys_state)state;
+    pImpl->setState(r2v_state);
     if (shouldCallback) {
         stateCallback((int)r2v_state);
     }
@@ -345,7 +346,7 @@ int SirenAudioVBVProcessor::process(PreprocessVoicePackage *voicePackage,
     }
 
     for (int i = 0; i < block_num; i++) {
-        if (ppR2ad_msg_block[i]->iMsgId == r2ad_awake_nocmd) {
+        if (ppR2ad_msg_block[i]->iMsgId == r2ad_awake_cmd) {
             r2v_state = r2ssp_state_awake;
         }
 
@@ -418,7 +419,8 @@ int SirenAudioVBVProcessor::process(PreprocessVoicePackage *voicePackage,
     }
 
     for (int i = 0; i < block_num; i++) {
-        if (ppR2ad_msg_block[i]->iMsgId == r2ad_awake_nocmd) {
+        hasVT = 0;
+        if (ppR2ad_msg_block[i]->iMsgId == r2ad_awake_cmd) {
             r2v_state = r2ssp_state_awake;
         }
 
@@ -440,12 +442,6 @@ int SirenAudioVBVProcessor::process(PreprocessVoicePackage *voicePackage,
             sl = 0.0;
         }
 
-        if (prop == r2ad_debug_audio) {
-            debug = 1;
-        } else {
-            debug = 0;
-        }
-
         if (hasVTInfo(prop, ppR2ad_msg_block[i]->pMsgData)) {
             //end and start is reverse
             if (0 != pImpl->getVTInfo(vt_word, end, start, vt_energy)) {
@@ -457,6 +453,7 @@ int SirenAudioVBVProcessor::process(PreprocessVoicePackage *voicePackage,
             }
         }
 
+        siren_printf(SIREN_INFO,"{%d} hasVT %d", prop, hasVT);
 
         if (len != 0 && hasVoice(prop)) {
             hasV = 1;
@@ -480,7 +477,6 @@ int SirenAudioVBVProcessor::process(PreprocessVoicePackage *voicePackage,
             pProcessedVoiceResult = allocateProcessedVoiceResult(len, debug, prop, start, end,
                                     hasSL, hasV, hasVT, sl, energy, threshold, vt_energy);
         }
-
         result.push_back(pProcessedVoiceResult);
     }
 

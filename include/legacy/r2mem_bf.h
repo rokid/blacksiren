@@ -10,8 +10,14 @@
 #define __r2audio__r2mem_bf__
 
 #include <stdio.h>
+
+#include "r2math.h"
+
+#ifdef CONFIG_BF_MVDR
+#include "r2mvdrapi.h"
+#else
 #include "r2ssp.h"
-#include "legacy/r2math.h"
+#endif
 
 class r2mem_bf
 {
@@ -29,12 +35,13 @@ public:
   const char* getinfo_sl();
   
   bool check(float fAzimuth, float fElevation);
-
+  
 public:
   
   //in
   int m_iMicNum ;
   int m_iFrmSize ;
+  int m_iFrmSize_Out ;
   
   float m_fSlInfo[3] ;
   
@@ -45,11 +52,18 @@ public:
   
   float * m_pData_Bf ;
   
+  int m_iLen_In_Cur ;
+  float** m_pData_In ;
+  
   //out
   int m_iLen_Out_Total ;
   float* m_pData_Out ;
   
+#ifdef CONFIG_BF_MVDR
+  r2mvdr_handle m_hEngine_Bf ;
+#else
   r2ssp_handle m_hEngine_Bf ;
+#endif
   
   //output
   std::string m_strSlInfo ;

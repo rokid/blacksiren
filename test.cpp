@@ -21,7 +21,7 @@
 #include "siren_channel.h"
 
 #if defined(__ANDROID__) || defined(ANDROID)
-#include "r2hw/mic_array.h"
+#include "mic/mic_array.h"
 #define DATA_TOP_DIR "/data/"
 #else
 #include <hardware/mic_array.h>

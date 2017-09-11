@@ -21,8 +21,6 @@ endif
 # debug channel
 #CONFIG_DEBUG_CHANNEL=y
 
-
-
 CONFIG_REMOTE_CONFIG_HOSTNAME=config.open.rokid.com
 
 CONFIG_REMOTE_CONFIG_FILE_URL=https://config.open.rokid.com/openconfig/blacksiren.json
@@ -30,4 +28,6 @@ CONFIG_REMOTE_CONFIG_FILE_URL=https://config.open.rokid.com/openconfig/blacksire
 #CONFIG_USE_AD1=y
 
 #CONFIG_USE_AD2=y
-CONFIG_TARGET_PRODUCT=nana_6_2
+#CONFIG_TARGET_PRODUCT=mini
+
+CONFIG_BF_MVDR=y

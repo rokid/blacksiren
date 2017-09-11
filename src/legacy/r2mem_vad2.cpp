@@ -89,7 +89,7 @@ int r2mem_vad2::process(float* pData_In, int iLen_In, int bIsEnd, int bIsAec, in
   AddInData(pData_In, iLen_In);
   int iFrmNum = m_iLen_In / m_iFrmSize ;
   
-  m_iLen_In = 0 ;
+  m_iLen_In = m_iLen_In - iFrmNum * m_iFrmSize  ;
   m_iLen_Out = 0 ;
   
   int rt = 0 ;
@@ -169,6 +169,10 @@ int r2mem_vad2::process(float* pData_In, int iLen_In, int bIsEnd, int bIsAec, in
   
   if (bForceStart) {
     assert(m_iVadState == 1);
+  }
+  
+  if (m_iLen_In > 0 && iFrmNum > 0) {
+    memcpy(m_pData_In, m_pData_In + m_iFrmSize * iFrmNum , m_iLen_In * sizeof(float));
   }
 
   return rt ;

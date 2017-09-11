@@ -58,6 +58,7 @@ public:
     void reset();
     void syncVTWord(std::vector<siren_vt_word> &words);
     int getVTInfo(std::string &vt_word, int &start, int &end, float &vt_energy);
+    void setState(r2v_sys_state state);
 
     float getLastFrameEnergy();
     float getLastFrameThreshold();
