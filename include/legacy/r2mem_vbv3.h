@@ -33,6 +33,8 @@ public:
   int GetEn_LastFrm();
   int GetEn_Shield();
   
+  int GetRealSl(int iFrmNum, float pSlInfo[3]);
+  
   int reset();
   
 public:
@@ -61,6 +63,10 @@ public:
   bool m_bAwake ;
   bool m_bSleep ;
   bool m_bHotWord ;
+  
+  
+  // real sl
+  
   
   
 };

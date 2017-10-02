@@ -291,8 +291,7 @@ void SirenAudioVBVProcessor::setSysSteer(float ho, float ver) {
 
 void SirenAudioVBVProcessor::syncVTWord(std::vector<siren_vt_word> &words) {
     if (words.empty()) {
-        siren_printf(SIREN_INFO, "sync vt words with empty words");
-        return;
+        siren_printf(SIREN_INFO, "sync vt words with empty words mean remove all");
     }
 #ifdef CONFIG_USE_AD2
     siren_printf(SIREN_INFO, "not support in ad2 version");
@@ -346,6 +345,7 @@ int SirenAudioVBVProcessor::process(PreprocessVoicePackage *voicePackage,
     }
 
     for (int i = 0; i < block_num; i++) {
+        hasVT = 0;
         if (ppR2ad_msg_block[i]->iMsgId == r2ad_awake_cmd) {
             r2v_state = r2ssp_state_awake;
         }
@@ -444,7 +444,7 @@ int SirenAudioVBVProcessor::process(PreprocessVoicePackage *voicePackage,
 
         if (hasVTInfo(prop, ppR2ad_msg_block[i]->pMsgData)) {
             //end and start is reverse
-            if (0 != pImpl->getVTInfo(vt_word, end, start, vt_energy)) {
+            if (0 != pImpl->getVTInfo(vt_word, start, end, vt_energy)) {
                 siren_printf(SIREN_ERROR, "wtf hasVTInfo but get VTInfo failed");
             } else {
                 hasVT = 1;
@@ -452,8 +452,6 @@ int SirenAudioVBVProcessor::process(PreprocessVoicePackage *voicePackage,
                 len = 0;
             }
         }
-
-        siren_printf(SIREN_INFO,"{%d} hasVT %d", prop, hasVT);
 
         if (len != 0 && hasVoice(prop)) {
             hasV = 1;
@@ -545,7 +543,7 @@ void PhonemeEle::genResult() {
     finals = finals.substr(0, finals.size() - 1);
     //siren_printf(SIREN_INFO, "initials = %s, finals = %s", initials.c_str(), finals.c_str());
 
-    result.append(initials).append("|# ").append(finals).append("|#");
+    result.append(initials).append("|# ").append(finals).append("|##");
     //siren_printf(SIREN_INFO, "result = %s", result.c_str());
 }
 

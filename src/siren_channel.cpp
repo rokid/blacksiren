@@ -61,7 +61,21 @@ Message* allocateMessage(int msg, int len) {
 
 Message* allocateMessageFromVTWord(std::vector<siren_vt_word> &vt_words) {
     if (vt_words.empty()) {
-        return nullptr;
+        char *pBuffer = new char [sizeof(Message)];
+        if (pBuffer == nullptr) {
+            return nullptr;
+        }
+
+        memset (pBuffer, 0, sizeof(Message));
+        Message *pMessage = (Message *)pBuffer;
+        pMessage->magic[0] = 'a';
+        pMessage->magic[1] = 'a';
+        pMessage->magic[2] = 'b';
+        pMessage->magic[3] = 'b';
+        pMessage->len = 0;
+        pMessage->data = nullptr;
+        pMessage->msg = SIREN_REQUEST_MSG_SYNC_VT_WORD_LIST;
+        return pMessage;
     }
     int total_len = 0;
 
@@ -169,14 +183,14 @@ int getVTWordFromMessage(Message *message, std::vector<siren_vt_word> &vt_words)
         return -1;
     }
 
-    if (message->data == nullptr) {
-        siren_printf(SIREN_ERROR, "message data is nullptr");
-        return -2;
-    }
-
     if (message->msg != SIREN_REQUEST_MSG_SYNC_VT_WORD_LIST) {
         siren_printf(SIREN_ERROR, "message msg is not sync vt word");
         return -3;
+    }
+
+    if (message->len == 0 || message->data == nullptr) {
+        siren_printf(SIREN_ERROR, "message data is nullptr");
+        return -2;
     }
 
     int total_len = message->len;
@@ -192,14 +206,14 @@ int getVTWordFromMessage(Message *message, std::vector<siren_vt_word> &vt_words)
         siren_printf(SIREN_ERROR, "len is %d cannot have so many configs", total_len);
         return -6;
     }
-    
+
     for (int i = 0; i < num; i++) {
         siren_vt_word vt;
         UnpackedVTConfig *unpackedVTConfig = (UnpackedVTConfig *)k;
         int total_len = unpackedVTConfig->total_len;
         p = k;
         k += total_len;
-        
+
         vt.vt_type = unpackedVTConfig->vt_type;
         vt.use_default_config = false;
         vt.alg_config.vt_classify_shield = unpackedVTConfig->vt_classify_shield;
@@ -249,7 +263,7 @@ int getVTWordFromMessage(Message *message, std::vector<siren_vt_word> &vt_words)
         }
 
         //add vt config
-        vt_words.push_back(vt);        
+        vt_words.push_back(vt);
     }
 
     return 0;

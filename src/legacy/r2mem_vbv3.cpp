@@ -132,6 +132,11 @@ int r2mem_vbv3::GetEn_Shield(){
   return r2_vbv_geten_shield(m_hEngine_Vbv);
 }
 
+int r2mem_vbv3::GetRealSl(int iFrmNum, float pSlInfo[3]){
+  
+  return r2_vbv_getsl(m_hEngine_Vbv, iFrmNum * m_iFrmSize , 0, pSlInfo);
+}
+
 int r2mem_vbv3::reset(){
   
   return r2_vbv_reset(m_hEngine_Vbv) ;

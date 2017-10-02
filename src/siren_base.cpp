@@ -368,7 +368,7 @@ void SirenBase::processThreadHandler() {
             Message* msg = (Message *)pVoicePackage->data;
             std::vector<siren_vt_word> vt_words;
             int ret = getVTWordFromMessage(msg, vt_words);
-            if (ret == 0) {
+            if (ret == 0 || ret == -2) {
                 audioProcessor.syncVTWord(vt_words);
             } else {
                 siren_printf(SIREN_ERROR, "sync vt word failed with %d", ret);

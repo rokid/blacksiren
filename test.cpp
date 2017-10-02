@@ -21,7 +21,7 @@
 #include "siren_channel.h"
 
 #if defined(__ANDROID__) || defined(ANDROID)
-#include "mic/mic_array.h"
+#include "r2hw/mic_array.h"
 #define DATA_TOP_DIR "/data/"
 #else
 #include <hardware/mic_array.h>
@@ -520,7 +520,7 @@ void test_xmos() {
 
     net_callback.net_event_callback = on_net_event;
     proc_callback.voice_event_callback = on_voice_event;
-    siren = init_siren((void *)&magic, nullptr, &input_callback);
+    siren = init_siren((void *)&magic, "/system/etc/blacksiren_xmos.json", &input_callback);
     if (siren == 0) {
         siren_printf(BlackSiren::SIREN_INFO, "init siren failed");
         return;
@@ -532,24 +532,23 @@ void test_xmos() {
     start_siren_process_stream(siren, &proc_callback);
     siren_printf(BlackSiren::SIREN_INFO, "go test");
 
-    //std::this_thread::sleep_for(std::chrono::seconds(5));
-    //set_siren_state(siren, SIREN_STATE_AWAKE, nullptr);
-#if 0
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+    set_siren_state(siren, SIREN_STATE_AWAKE, nullptr);
+
     std::thread t([&] {
-        //std::this_thread::sleep_for(std::chrono::seconds(10));
-        //siren_printf(BlackSiren::SIREN_INFO, "test set state awake sync");
-        //set_siren_state(siren, SIREN_STATE_AWAKE, nullptr);
-        //siren_printf(BlackSiren::SIREN_INFO, "now state is in wake");
-        //std::this_thread::sleep_for(std::chrono::seconds(10));
-        //siren_printf(BlackSiren::SIREN_INFO, "stop");
-        //stop_siren_process_stream(siren);
-        //set_siren_state(siren, SIREN_STATE_SLEEP, &state_changed_callback);
-        //std::this_thread::sleep_for(std::chrono::seconds(100000));
-        siren_printf(BlackSiren::SIREN_INFO, "test twice start");
-        start_siren_process_stream(siren, &proc_callback);
-    });
+        while(true){
+            //siren_printf(BlackSiren::SIREN_INFO, "test set state awake sync");
+            //stop_siren_process_stream(siren);
+            std::this_thread::sleep_for(std::chrono::seconds(15));
+            set_siren_state(siren, SIREN_STATE_SLEEP, &state_changed_callback);
+
+            std::this_thread::sleep_for(std::chrono::seconds(15));
+            set_siren_state(siren, SIREN_STATE_AWAKE, nullptr);
+            //start_siren_process_stream(siren, &proc_callback);
+        }});
 
     t.join();
+#if 0
 #endif
     for (;;) {
         std::this_thread::sleep_for(std::chrono::seconds(10));
@@ -698,6 +697,7 @@ void test_vt() {
     vt1.use_default_config = true;
     vt1.vt_word = "你好";
 
+#if 0
     vt2.vt_phone = "sha3bi1";
     vt2.vt_type = VT_TYPE_HOTWORD;
     vt2.use_default_config = false;
@@ -716,15 +716,18 @@ void test_vt() {
     vt3.vt_type = VT_TYPE_SLEEP;
     vt3.use_default_config = true;
     vt3.vt_word = "好人";
+#endif
 
     siren_vt_t result = add_vt_word(siren, &vt1, true);
     siren_printf(BlackSiren::SIREN_INFO, "add %s with result %d", vt1.vt_word.c_str(), result);
     std::this_thread::sleep_for(std::chrono::seconds(10));
-
+#if 0
     result = add_vt_word(siren, &vt2, true);
     siren_printf(BlackSiren::SIREN_INFO, "add %s with result %d", vt2.vt_word.c_str(), result);
     std::this_thread::sleep_for(std::chrono::seconds(10));
-#if 0
+#endif
+
+#if 1
     //test get
     siren_vt_word *words = nullptr;
     int num = get_vt_word(siren, &words);
@@ -736,9 +739,11 @@ void test_vt() {
     std::this_thread::sleep_for(std::chrono::seconds(3));
     siren_printf(BlackSiren::SIREN_INFO, "after add...");
 #endif
+#if 0
     result = add_vt_word(siren, &vt3, true);
     siren_printf(BlackSiren::SIREN_INFO, "add %s with result %d", vt3.vt_word.c_str(), result);
     std::this_thread::sleep_for(std::chrono::seconds(10));
+#endif
 #if 0
     num = get_vt_word(siren, &words);
     if (num > 0) {
@@ -747,16 +752,18 @@ void test_vt() {
         }
     }
 #endif
-    siren_printf(BlackSiren::SIREN_INFO, "after remove...");
-    result = remove_vt_word(siren, vt3.vt_word.c_str());
+    siren_printf(BlackSiren::SIREN_INFO, "try remove...");
+    result = remove_vt_word(siren, vt1.vt_word.c_str());
     std::this_thread::sleep_for(std::chrono::seconds(10));
 #if 1
-    siren_vt_word *words = nullptr;
-    int num = get_vt_word(siren, &words);
+    words = nullptr;
+    num = get_vt_word(siren, &words);
     if (num > 0) {
         for (int i = 0; i < num; i++) {
             dump_vt_word(words[i]);
         }
+    } else {
+        siren_printf(BlackSiren::SIREN_INFO, "read num %d", num);
     }
 #endif
     //destroy_siren(siren);
@@ -775,11 +782,11 @@ int main(void) {
 
     //test_init();
     //test_recording();
-    test_xmos();
+    //test_xmos();
     //test_mic();
     //test_download();
 
     //test_send();
 
-    //test_vt();
+    test_vt();
 }

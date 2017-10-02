@@ -59,7 +59,7 @@
                     "vt_left_check":true,
                     "vt_right_right":true,
                     "vt_remote_check_with_aec":true,
-                    "vt_remote_check_without_aec":true,
+                    "vt_remote_check_without_aec":false,
                     "vt_local_classify_check":true,
                     "vt_classify_shield":-0.3,
                     "vt_nnet_path":"/system/workdir_cn/final.ruoqi.mod"
@@ -90,7 +90,7 @@
         "debug_proc_result_record":false,
         "debug_rs_record":false,
         "debug_aec_record":false,
-        "debug_bf_record":false,
+        "debug_bf_record":true,
         "debug_bf_raw_record":false,
         "debug_vad_record":false,
         "debug_opu_record":false,

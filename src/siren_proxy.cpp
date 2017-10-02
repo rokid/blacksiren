@@ -186,7 +186,7 @@ void RecordingThread::recordingFn() {
             if (doMicRecording) {
                 micRecordingStream.write(frameBuffer, frameSize);
             }
-            
+
             //
             if (!recordingStart) {
                 continue;
@@ -618,20 +618,20 @@ void SirenProxy::set_siren_steer(float ho, float var) {
     requestQueue.push(req);
 }
 
-int SirenProxy::hasVTWord(const char *word, std::vector<siren_vt_word>::iterator &iterator) {
+bool SirenProxy::hasVTWord(const char *word, std::vector<siren_vt_word>::iterator &iterator) {
     if (word == nullptr) {
-        return -1;
+        return false;
     }
 
     iterator = vt_words.begin();
     for (size_t i = 0; iterator != vt_words.end(); ++iterator, i++) {
         if (!strcmp(word, iterator->vt_word.c_str())) {
-            return i;
+            return true;
         }
     }
 
     //don't have
-    return 0;
+    return false;
 }
 
 
@@ -660,11 +660,15 @@ siren_vt_t SirenProxy::add_vt_word(siren_vt_word *word, bool use_default_setting
 
     std::vector<siren_vt_word>::iterator it;
 
-    int has = hasVTWord(word->vt_word.c_str(), it);
-    if (has > 0) {
+    bool has = hasVTWord(word->vt_word.c_str(), it);
+    if (has) {
         siren_printf(SIREN_ERROR, "already has that word!");
         return SIREN_VT_DUP;
     }
+    uint32_t word_size = 0;
+    for(int i = 0; i < word->vt_phone.length(); i++)
+        if(word->vt_phone[i] >= 49 && word->vt_phone[i] <= 52)
+            word_size++;
 
     std::string pinyin;
     if (!phonemeGen.pinyin2Phoneme(word->vt_phone.c_str(), pinyin)) {
@@ -675,8 +679,18 @@ siren_vt_t SirenProxy::add_vt_word(siren_vt_word *word, bool use_default_setting
     word->vt_phone = pinyin;
 
     if (use_default_settings) {
-        word->alg_config.vt_block_avg_score = 4.2f;
-        word->alg_config.vt_block_min_score = 2.7f;
+        float vt_block_avg_score = 4.2f, vt_block_min_score = 2.7f;
+        int32_t ecx = (word_size + 1) / 2 - 1;
+        if(ecx > 0 && ecx < 3) {
+            for(int i = 0; i < ecx; i++) {
+                vt_block_avg_score -= 0.5f;
+                vt_block_min_score -= 0.5f;
+            }
+        }
+        if(vt_block_avg_score < 3.2f) vt_block_avg_score = 3.2f;
+        if(vt_block_min_score < 1.7f) vt_block_min_score = 1.7f;
+        word->alg_config.vt_block_avg_score = vt_block_avg_score;
+        word->alg_config.vt_block_min_score = vt_block_min_score;
         word->alg_config.vt_left_sil_det = true;
         word->alg_config.vt_right_sil_det = false;
         word->alg_config.vt_remote_check_with_aec = true;
@@ -709,22 +723,24 @@ siren_vt_t SirenProxy::remove_vt_word(const char *word) {
         return SIREN_VT_ERROR;
     }
 
-    std::vector<siren_vt_word>::iterator it;
-    int index =  hasVTWord(word, it);
-    if (index == -1) {
-        siren_printf(SIREN_ERROR, "no such word: %s", word);
-        return SIREN_VT_DUP;
+    if (vt_words.empty()) {
+        siren_printf(SIREN_ERROR, "words empty");
+        return SIREN_VT_ERROR;
     }
 
+    std::vector<siren_vt_word>::iterator it;
+    bool has = hasVTWord(word, it);
+    if (!has) {
+        siren_printf(SIREN_ERROR, "no such word: %s", word);
+        return SIREN_VT_NO_EXIT;
+    }
     vt_words.erase(it);
     Message *req = allocateMessageFromVTWord(vt_words);
     if (req == nullptr) {
         siren_printf(SIREN_ERROR, "allocate sync vt word msg failed");
         return SIREN_VT_ERROR;
     }
-
     requestQueue.push(req);
-
 
     return SIREN_VT_OK;
 }

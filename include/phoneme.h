@@ -796,6 +796,7 @@ const char PHONEME[] =
 "shang4 sh_B a4 NG_E\n"
 "shao1 sh_B a1 W_E\n"
 "shao2 sh_B a2 W_E\n"
+"shao3 sh_B a3 W_E\n"
 "shao4 sh_B a4 W_E\n"
 "she1 sh_B e1_E\n"
 "she2 sh_B e2_E\n"

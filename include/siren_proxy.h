@@ -143,7 +143,7 @@ public:
 private:
     std::function<void(void*, int)> stateChangeCallback; 
     void *token;
-    int hasVTWord(const char  *word, std::vector<siren_vt_word>::iterator &);
+    bool hasVTWord(const char  *word, std::vector<siren_vt_word>::iterator &);
     
     friend class RecordingThread;
     void launchRequestThread();

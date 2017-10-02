@@ -30,4 +30,4 @@ CONFIG_REMOTE_CONFIG_FILE_URL=https://config.open.rokid.com/openconfig/blacksire
 #CONFIG_USE_AD2=y
 #CONFIG_TARGET_PRODUCT=mini
 
-CONFIG_BF_MVDR=y
+#CONFIG_BF_MVDR=y
