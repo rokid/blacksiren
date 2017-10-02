@@ -436,7 +436,8 @@ int SirenAudioVBVProcessor::process(PreprocessVoicePackage *voicePackage,
             len = 0;
             hasSL = 1;
             std::string::size_type sz;
-            sl = std::stod(std::string(ppR2ad_msg_block[i]->pMsgData), &sz);
+//            sl = std::stod(std::string(ppR2ad_msg_block[i]->pMsgData), &sz);
+            sl = atof(ppR2ad_msg_block[i]->pMsgData);
         } else {
             hasSL = 0;
             sl = 0.0;

@@ -13,7 +13,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <cstdio>
-#include <curl/curl.h>
+//#include <curl/curl.h>
 #include <netdb.h>
 #include <sys/param.h>
 #include <netinet/in.h>
@@ -56,7 +56,13 @@ template <typename T>
 std::string build_printable_indx(const std::vector<T> &from) {
     std::string result;
     for (T j : from) {
+#if (PLATFORM_SDK_VERSION == 19)
+        std::ostringstream stm;
+        stm << j ;
+        result.append(stm.str()).append(" ");
+#else
         result.append(std::to_string(j)).append(" ");
+#endif
     }
     return result;
 }

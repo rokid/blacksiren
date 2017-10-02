@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <string.h>
+#include <errno.h>
 
 #include "siren_net.h"
 #include "sutils.h"
@@ -15,7 +16,8 @@ namespace BlackSiren {
 
 siren_net_result SirenUDPAgent::prepareRecv() {
     struct sockaddr_in addrto;
-    bzero(&addrto, sizeof(struct sockaddr_in));
+//    bzero(&addrto, sizeof(struct sockaddr_in));
+    memset(&addrto, 0, sizeof(struct sockaddr_in));
     addrto.sin_family = AF_INET;
     addrto.sin_addr.s_addr = htonl(INADDR_ANY);
     addrto.sin_port = htons(config->udp_port);
@@ -31,7 +33,8 @@ siren_net_result SirenUDPAgent::prepareRecv() {
         return SIREN_NET_FAILED;
     }
 
-    bzero(&from, sizeof(struct sockaddr_in));
+//    bzero(&from, sizeof(struct sockaddr_in));
+    memset(&from, 0, sizeof(struct sockaddr_in));
     from.sin_family = AF_INET;
     from.sin_addr.s_addr = htonl(INADDR_ANY);
     from.sin_port = htons(config->udp_port);
@@ -53,7 +56,8 @@ siren_net_result SirenUDPAgent::prepareSend() {
         return SIREN_NET_FAILED;
     }
 
-    bzero(&addrto, sizeof(struct sockaddr_in));
+//    bzero(&addrto, sizeof(struct sockaddr_in));
+    memset(&addrto, 0, sizeof(struct sockaddr_in));
     addrto.sin_family = AF_INET;
     addrto.sin_addr.s_addr = htonl(INADDR_BROADCAST);
     addrto.sin_port = htons(config->udp_port);

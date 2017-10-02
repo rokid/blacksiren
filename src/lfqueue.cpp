@@ -14,6 +14,7 @@
 #include "lfqueue.h"
 
 #ifndef futex
+#define SYS_futex __NR_futex
 #define futex(...)  syscall(SYS_futex, __VA_ARGS__)
 #endif
 
@@ -113,7 +114,11 @@ int LFCounter::dec(struct timespec *timeout) {
 }
 
 void LFCounter::wake() {
+#if (PLATFORM_SDK_VERSION == 19)
+    futex_wake(&this->val, INT_MAX);
+#else
     futex_wake(&this->val, INT32_MAX);
+#endif
 }
 
 void LFCounter::wake_if_needed() {

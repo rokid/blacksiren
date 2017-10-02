@@ -37,7 +37,9 @@
 /* #undef HAVE_DOPRNT */
 
 /* Define to 1 if you have the <endian.h> header file. */
+#ifndef HAVE_ENDIAN_H
 #define HAVE_ENDIAN_H 1
+#endif
 
 /* Define to 1 if you have the <fcntl.h> header file. */
 #define HAVE_FCNTL_H 1

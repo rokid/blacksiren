@@ -1,6 +1,13 @@
 LOCAL_PATH:= $(call my-dir)
 CURRENT_PATH := $(LOCAL_PATH)
 
+define all-named-files-under
+$(patsubst ./%,%, \
+  $(shell cd $(LOCAL_PATH) ; \
+          find -L $(2) -name "$(1)" -and -not -name ".*") \
+ )
+endef
+
 include $(LOCAL_PATH)/siren_config.mk
 include $(LOCAL_PATH)/siren_enable_flags.mk
 
@@ -25,13 +32,6 @@ $(info $(TARGET_DEVICE))
 include $(wildcard $(LOCAL_PATH)/thirdparty/libjsonc/Android.mk)
 LOCAL_PATH := $(CURRENT_PATH)
 
-ifneq (,$(ONE_SHOT_MAKEFILE))
-$(info ONE SHOT MAKEFILE!!!!)
-include $(wildcard external/curl/Android.mk)
-LOCAL_PATH := $(CURRENT_PATH)
-endif
-
-
 include $(CLEAR_VARS)
 LOCAL_PREBUILT_LIBS := \
 		libr2audio:thirdparty/support/libs/android/armv7eabi/legacy/libr2audio.so \
@@ -44,33 +44,34 @@ LOCAL_PREBUILT_LIBS += libr2mvdrbf:thirdparty/support/libs/android/armv7eabi/lib
 endif
 include $(BUILD_MULTI_PREBUILT)
 
-THIRD_INCLUDES += \
-	$(LOCAL_PATH)/thirdparty/support/include \
-	$(LOCAL_PATH)/thirdparty/libjsonc/include \
-	external/curl/include 
-
 include $(CLEAR_VARS)
 
-
-SRC := $(call all-named-files-under,*.cpp,src) 
-
-LOCAL_SRC_FILES:= \
-	$(SRC) 
+LOCAL_SRC_FILES := $(call all-named-files-under,*.cpp,src)
 
 LOCAL_C_INCLUDES += \
-		$(THIRD_INCLUDES) \
-		$(LOCAL_PATH)/include 
+		$(LOCAL_PATH)/include \
+		$(LOCAL_PATH)/thirdparty/support/include \
+		$(LOCAL_PATH)/thirdparty/libjsonc/include
 
 ifeq ($(PLATFORM_SDK_VERSION),22)
 LOCAL_SHARED_LIBRARIES += libdl
 LOCAL_STATIC_LIBRARIES += libc++
 LOCAL_C_INCLUDES += external/libcxx/include
+else ifeq ($(PLATFORM_SDK_VERSION), 19)
+MY_LOCAL_STATIC_LIBRARIES := prebuilts/ndk/current/sources/cxx-stl/gnu-libstdc++/libs/$(TARGET_CPU_ABI)/libgnustl_static.a
+LOCAL_LDFLAGS += $(MY_LOCAL_STATIC_LIBRARIES) -ldl
+LOCAL_STATIC_LIBRARIES += libc
+LOCAL_C_INCLUDES += \
+		prebuilts/ndk/current/sources/cxx-stl/gnu-libstdc++/libs/$(TARGET_CPU_ABI)/include \
+		prebuilts/ndk/current/sources/cxx-stl/gnu-libstdc++/include \
+		prebuilts/ndk/current/platforms/android-14/arch-arm/usr/include
 endif
 
-LOCAL_CFLAGS:= $(L_CFLAGS) -Wall -Wextra -std=gnu++11
+LOCAL_CFLAGS:= $(L_CFLAGS) -Wall -Wextra -std=gnu++11 -DPLATFORM_SDK_VERSION=$(PLATFORM_SDK_VERSION)
 LOCAL_MODULE:= libbsiren
 LOCAL_SHARED_LIBRARIES += liblog libr2ssp libztvad libr2vt
 LOCAL_STATIC_LIBRARIES += libjsonc_static libopus
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/include
 
 ifdef CONFIG_BF_MVDR
 $(info use mvdr)
@@ -86,7 +87,6 @@ ifdef CONFIG_USE_AD2
 $(info use ad2)
 LOCAL_SHARED_LIBRARIES += libr2audio
 endif
-
 
 include $(BUILD_SHARED_LIBRARY)
 
@@ -106,11 +106,18 @@ ifeq ($(PLATFORM_SDK_VERSION),22)
 LOCAL_SHARED_LIBRARIES += libdl
 LOCAL_STATIC_LIBRARIES += libc++
 LOCAL_C_INCLUDES += external/libcxx/include
+else ifeq ($(PLATFORM_SDK_VERSION), 19)
+MY_LOCAL_STATIC_LIBRARIES := prebuilts/ndk/current/sources/cxx-stl/gnu-libstdc++/libs/$(TARGET_CPU_ABI)/libgnustl_static.a
+LOCAL_LDFLAGS += $(MY_LOCAL_STATIC_LIBRARIES) -ldl
+LOCAL_CFLAGS := -std=gnu++11 -fpermissive
+LOCAL_C_INCLUDES += \
+		prebuilts/ndk/current/sources/cxx-stl/gnu-libstdc++/libs/$(TARGET_CPU_ABI)/include \
+		prebuilts/ndk/current/sources/cxx-stl/gnu-libstdc++/include \
+		prebuilts/ndk/current/platforms/android-14/arch-arm/usr/include
 endif
 
 LOCAL_MODULE := test
-LOCAL_SHARED_LIBRARIES += libbsiren libhardware libcurl
-LOCAL_STATIC_LIBRARIES += libjsonc_static
+LOCAL_SHARED_LIBRARIES += libbsiren libhardware #libcurl
 include $(BUILD_EXECUTABLE)
 #endif
 #include $(wildcard $(LOCAL_PATH)/java/jni/Android.mk)

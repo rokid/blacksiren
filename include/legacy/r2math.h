@@ -76,7 +76,7 @@
 #define strtok_s strtok_r
 #endif
 
-#if 0
+#if (PLATFORM_SDK_VERSION == 19)
 #ifdef __ARM_ARCH_ARM__
 
 #ifdef __LP64__
